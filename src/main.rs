@@ -14,7 +14,7 @@ fn main() {
     let rt = Runtime::new().unwrap();
 
     if let Err(why) = rt.block_on(try_main()) {
-        error!("Main error: {why}");
+        error!("Error in main: {why}");
     }
 }
 

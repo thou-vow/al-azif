@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-pub const ALIASES: [&str; 2] = ["atacar", "attack"];
+pub const ALIASES: [&str; 2] = ["attack", "atacar"];
 
 pub async fn run_command(bot: &impl AsBot, msg: &Message, args: &[&str]) -> ResponseResult {
     let Ok(battle_m) = Mirror::<Battle>::get(bot, &msg.channel_id.to_string()).await else {
@@ -16,7 +16,7 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message, args: &[&str]) -> Resp
 
     let mut battle = battle_m.write().await;
     if *target_tag == battle.state.current_turn_owner_tag.as_ref() {
-        return simple_response("O alvo não pode ser você.", ResponseMode::Delete);
+        return simple_response("O alvo não pode ser o próprio usuário.", ResponseMode::Delete);
     }
 
     let user_m = Mirror::<Id>::get(bot, &battle.state.current_turn_owner_tag).await?;
