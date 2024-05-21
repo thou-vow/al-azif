@@ -9,7 +9,10 @@ Cargo.lock
 
 # Secrets
 .env
-database/battles/*
-database/ids/*
-database/players/*
+database/*
 tests
+
+# But will track the directores
+!database/battles/
+!database/ids/
+!database/players/
