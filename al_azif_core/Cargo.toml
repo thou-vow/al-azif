@@ -1,0 +1,15 @@
+[package]
+name = "al_azif_core"
+
+edition.workspace = true
+
+[dependencies]
+al_azif_utils.workspace = true
+anyhow.workspace = true
+bincode.workspace = true
+derive_more.workspace = true
+rand.workspace = true
+serde.workspace = true
+serenity.workspace = true
+tokio.workspace = true
+tracing.workspace = true

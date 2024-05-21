@@ -1,0 +1,15 @@
+# IDE directories and folders
+.vscode/
+
+# Target directory
+target/
+
+# Lockfile
+Cargo.lock
+
+# Secrets
+.env
+database/battles/*
+database/ids/*
+database/players/*
+tests

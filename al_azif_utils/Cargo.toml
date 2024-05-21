@@ -1,0 +1,5 @@
+[package]
+name = "al_azif_utils"
+edition.workspace = true
+
+[dependencies]
