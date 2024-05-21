@@ -2,7 +2,7 @@
 members = ["al_azif_core", "al_azif_events", "al_azif_prefix", "al_azif_slash", "al_azif_utils"]
 
 [workspace.package]
-authors = ["thou_vow"]
+authors = ["thou-vow"]
 description = "A Discord bot with a Roleplaying Game system."
 license = "MIT"
 repository = "https://github.com/thou-vow/al-azif"

@@ -12,7 +12,7 @@ Cargo.lock
 database/*
 tests
 
-# But will track the directores
+# But will track the directories
 !database/battles/
 !database/ids/
 !database/players/
