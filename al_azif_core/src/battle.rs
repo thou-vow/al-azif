@@ -20,12 +20,12 @@ impl Battle {
             .contains_key(&self.state.current_turn_owner_tag)
             .then(|| self.state.current_turn_owner_tag.clone())
         {
-            blueprints.extend(self.end_turn(bot, &current_turn_owner_tag));
+            blueprints.extend(self.end_turn(bot, &current_turn_owner_tag).await?);
         }
         
         loop {
             if let Some(next_turn_owner_tag) = self.get_next_turn_owner().map(Box::<str>::from) {
-                blueprints.extend(self.start_turn(bot, &next_turn_owner_tag));
+                blueprints.extend(self.start_turn(bot, &next_turn_owner_tag).await?);
                 self.state.turn += 1;
                 self.state.current_turn_owner_tag = next_turn_owner_tag;
                 break;
@@ -48,7 +48,7 @@ impl Battle {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
             let id = id_m.read().await;
             
-            desc += &f!("**{}** | ``{id_tag}``\n{filled_portion}{empty_portion} {} / {}\n\n",
+            desc += &f!("**{}** [``{id_tag}``]\n{filled_portion}{empty_portion} {} / {}\n\n",
                 id.ego.name,
                 mark_thousands(opponent.action_value),
                 mark_thousands(self.state.action_value_cap)
@@ -63,15 +63,17 @@ impl Battle {
     }
 }
 impl Battle {
-    fn end_turn(&mut self, _bot: &impl AsBot, id_tag: &str) -> Vec<ResponseBlueprint> {
+    async fn end_turn(&mut self, bot: &impl AsBot, id_tag: &str) -> Result<Vec<ResponseBlueprint>> {
         let mut blueprints = Vec::new();
         
         let opponent = self.opponents.get_mut(id_tag).unwrap();
         opponent.action_value -= self.state.action_value_cap;
 
-        blueprints.push(ResponseBlueprint::default().content(f!("Fim do turno de {}.", id_tag)));
+        blueprints.push(ResponseBlueprint::default().content(f!("Fim do turno de {} [``{id_tag}``].",
+            Mirror::<Id>::get(bot, id_tag).await?.read().await.ego.name
+        )));
         
-        blueprints
+        Ok(blueprints)
     }
     fn get_next_turn_owner(&self) -> Option<&str> {
         self.opponents.iter()
@@ -101,12 +103,14 @@ impl Battle {
 
         Ok(blueprints)
     }
-    fn start_turn(&mut self, _bot: &impl AsBot, id_tag: &str) -> Vec<ResponseBlueprint> {
+    async fn start_turn(&mut self, bot: &impl AsBot, id_tag: &str) -> Result<Vec<ResponseBlueprint>> {
         let mut blueprints = Vec::new();
 
-        blueprints.push(ResponseBlueprint::default().content(f!("Agora é o turno de {id_tag}.")));
+        blueprints.push(ResponseBlueprint::default().content(f!("Agora é o turno de {} [``{id_tag}``].",
+            Mirror::<Id>::get(bot, id_tag).await?.read().await.ego.name
+        )));
 
-        blueprints
+        Ok(blueprints)
     }
 }
 impl Reflective for Battle {
