@@ -1,16 +1,17 @@
 use crate::prelude::*;
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Battle {
-    pub tag: Box<str>,
-    pub opponents: HashMap<Box<str>, Opponent>,
+    pub tag: Arc<str>,
+    pub opponents: HashMap<Arc<str>, Opponent>,
     pub state: BattleState,
 }
 impl Battle {
     pub fn new(tag: &str) -> Self {
         Self {
             tag: tag.into(),
-            ..Default::default()
+            opponents: HashMap::new(),
+            state: BattleState::new(),
         }
     }
     pub async fn advance(&mut self, bot: &impl AsBot) -> Result<Vec<ResponseBlueprint>> {
@@ -20,12 +21,18 @@ impl Battle {
             .contains_key(&self.state.current_turn_owner_tag)
             .then(|| self.state.current_turn_owner_tag.clone())
         {
-            blueprints.extend(self.end_turn(bot, &current_turn_owner_tag).await?);
+            blueprints.extend(
+                Mirror::<Id>::get(bot, &current_turn_owner_tag).await?
+                    .write().await.end_turn(self).await?
+            );
         }
         
         loop {
-            if let Some(next_turn_owner_tag) = self.get_next_turn_owner().map(Box::<str>::from) {
-                blueprints.extend(self.start_turn(bot, &next_turn_owner_tag).await?);
+            if let Some(next_turn_owner_tag) = self.get_next_turn_owner() {
+                blueprints.extend(
+                    Mirror::<Id>::get(bot, &next_turn_owner_tag).await?
+                        .write().await.start_turn(self).await?
+                );
                 self.state.turn += 1;
                 self.state.current_turn_owner_tag = next_turn_owner_tag;
                 break;
@@ -63,33 +70,6 @@ impl Battle {
     }
 }
 impl Battle {
-    async fn end_turn(&mut self, bot: &impl AsBot, id_tag: &str) -> Result<Vec<ResponseBlueprint>> {
-        let mut blueprints = Vec::new();
-        
-        let opponent = self.opponents.get_mut(id_tag).unwrap();
-        opponent.action_value -= self.state.action_value_cap;
-
-        blueprints.push(ResponseBlueprint::default().content(f!("Fim do turno de {} [``{id_tag}``].",
-            Mirror::<Id>::get(bot, id_tag).await?.read().await.ego.name
-        )));
-        
-        Ok(blueprints)
-    }
-    fn get_next_turn_owner(&self) -> Option<&str> {
-        self.opponents.iter()
-            .max_by(|(_, opponent1), (_, opponent2)| {
-                let order = opponent1.action_value.cmp(&opponent2.action_value);
-                if order == Ordering::Equal {
-                    if rand::thread_rng().gen_bool(0.5) {
-                        return Ordering::Less;
-                    }
-                    return Ordering::Greater;
-                }
-                order
-            })
-            .filter(|(_, opponent)| opponent.action_value >= self.state.action_value_cap)
-            .map(|(tag, _)| tag.as_ref())
-    }
     async fn start_next_phase(&mut self, bot: &impl AsBot) -> Result<Vec<ResponseBlueprint>> {
         let mut blueprints = Vec::new();
 
@@ -103,14 +83,20 @@ impl Battle {
 
         Ok(blueprints)
     }
-    async fn start_turn(&mut self, bot: &impl AsBot, id_tag: &str) -> Result<Vec<ResponseBlueprint>> {
-        let mut blueprints = Vec::new();
-
-        blueprints.push(ResponseBlueprint::default().content(f!("Agora é o turno de {} [``{id_tag}``].",
-            Mirror::<Id>::get(bot, id_tag).await?.read().await.ego.name
-        )));
-
-        Ok(blueprints)
+    fn get_next_turn_owner(&self) -> Option<Arc<str>> {
+        self.opponents.iter()
+            .max_by(|(_, opponent1), (_, opponent2)| {
+                let order = opponent1.action_value.cmp(&opponent2.action_value);
+                if order == Ordering::Equal {
+                    if rand::thread_rng().gen_bool(0.5) {
+                        return Ordering::Less;
+                    }
+                    return Ordering::Greater;
+                }
+                order
+            })
+            .filter(|(_, opponent)| opponent.action_value >= self.state.action_value_cap)
+            .map(|(tag, _)| tag.clone())
     }
 }
 impl Reflective for Battle {
@@ -120,15 +106,26 @@ impl Reflective for Battle {
     }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Opponent {
+    pub tag: Arc<str>,
     pub action_value: i64,
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct BattleState {
     pub turn: i64,
     pub phase: i64,
-    pub current_turn_owner_tag: Box<str>,
+    pub current_turn_owner_tag: Arc<str>,
     pub action_value_cap: i64,
+}
+impl BattleState {
+    pub fn new() -> Self {
+        Self {
+            turn: 0,
+            phase: 0,
+            current_turn_owner_tag: "".into(),
+            action_value_cap: 0,
+        }
+    }
 }

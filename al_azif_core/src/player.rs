@@ -1,14 +1,13 @@
 use crate::prelude::*;
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Player {
-    pub tag: Box<str>,
+    pub tag: Arc<str>,
 }
 impl Player {
     pub fn new(tag: &str) -> Self {
         Self {
-            tag: tag.into(),
-            ..Default::default()
+            tag: tag.into()
         } 
     }
 }

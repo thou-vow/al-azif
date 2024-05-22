@@ -1,8 +1,8 @@
 use crate::prelude::*;
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Id {
-    pub tag: Box<str>,
+    pub tag: Arc<str>,
     pub ego: Ego,
     pub lvl: i64,
     pub xp: i64,
@@ -11,13 +11,13 @@ pub struct Id {
     pub points_to_distribute: i64,
     pub attributes: Attributes,
     pub color: Option<u32>,
-    pub current_battle: Option<Box<str>>,
+    pub current_battle: Option<Arc<str>>,
 }
 impl Id {
     pub fn new(tag: &str) -> Self {
         Self {
             tag: tag.into(),
-            ego: Ego::default(),
+            ego: Ego::new(),
             lvl: 0,
             xp: 0,
             hp: 50,
@@ -32,6 +32,7 @@ impl Id {
 impl Id {
     pub async fn join_battle(&mut self, battle: &mut Battle) {
         let opponent = Opponent {
+            tag: self.tag.clone(),
             action_value: self.attributes.movement,
         };
 
@@ -42,6 +43,32 @@ impl Id {
         }
         
         self.current_battle = Some(battle.tag.clone());
+    }
+    pub async fn start_turn(&mut self, _battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
+        let mut blueprints = Vec::new();
+
+        blueprints.push(ResponseBlueprint {
+            content: Some(f!("Agora é a vez de {} [``{}``].",
+                self.ego.name, self.tag
+            ).into()),
+            ..Default::default()
+        });
+
+        Ok(blueprints)
+    }
+    pub async fn end_turn(&mut self, battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
+        let mut blueprints = Vec::new();
+
+        battle.opponents.get_mut(&self.tag).unwrap().action_value -= battle.state.action_value_cap;
+
+        blueprints.push(ResponseBlueprint {
+            content: Some(f!("Fim do turno de {} [``{}``].",
+                self.ego.name, self.tag
+            ).into()),
+            ..Default::default()
+        });
+
+        Ok(blueprints)
     }
     pub fn take_damage(&mut self, value: i64) {
         self.hp = max(self.hp - value, 0);
@@ -54,14 +81,23 @@ impl Reflective for Id {
     }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Ego {
     pub name: Box<str>,
     pub gender: Gender,
     pub age: Age,
 }
+impl Ego {
+    pub fn new() -> Self {
+        Self {
+            name: "Unknown".into(),
+            gender: Gender::Other,
+            age: Age::Child,
+        }
+    }
+}
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Attributes {
     pub constitution: i64,
     pub spirit: i64,
@@ -85,18 +121,18 @@ impl Attributes {
     }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub enum Gender {
-    #[default] Other,
+    Other,
     Female,
     Male,
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub enum Age {
     Child,
     Teen,
-    #[default] Young,
+    Young,
     Adult,
     MiddleAged,
     Senior,
