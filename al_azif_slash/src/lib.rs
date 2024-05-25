@@ -1,7 +1,9 @@
-mod battle;
-mod id;
-mod exp;
-mod ping;
+mod commands {
+    pub mod battle;
+    pub mod exp;
+    pub mod id;
+    pub mod ping;
+}
 pub mod prelude;
 
 use crate::prelude::*;

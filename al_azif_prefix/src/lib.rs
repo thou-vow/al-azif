@@ -1,4 +1,6 @@
-mod attack;
+mod commands {
+    pub mod attack;
+}
 pub mod prelude;
 
 use crate::prelude::*;
