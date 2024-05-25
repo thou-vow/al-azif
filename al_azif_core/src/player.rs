@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Player {
-    pub tag: Arc<str>,
+    pub tag: Box<str>,
 }
 impl Player {
     pub fn new(tag: &str) -> Self {

@@ -2,8 +2,8 @@ use crate::prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Battle {
-    pub tag: Arc<str>,
-    pub opponents: HashMap<Arc<str>, Opponent>,
+    pub tag: Box<str>,
+    pub opponents: HashMap<Box<str>, Opponent>,
     pub state: BattleState,
 }
 impl Battle {
@@ -23,7 +23,8 @@ impl Battle {
         {
             blueprints.extend(
                 Mirror::<Id>::get(bot, &current_turn_owner_tag).await?
-                    .write().await.end_turn(self).await?
+                    .write().await
+                    .end_turn(self).await?
             );
         }
         
@@ -83,7 +84,7 @@ impl Battle {
 
         Ok(blueprints)
     }
-    fn get_next_turn_owner(&self) -> Option<Arc<str>> {
+    fn get_next_turn_owner(&self) -> Option<Box<str>> {
         self.opponents.iter()
             .max_by(|(_, opponent1), (_, opponent2)| {
                 let order = opponent1.action_value.cmp(&opponent2.action_value);
@@ -108,7 +109,7 @@ impl Reflective for Battle {
 
 #[derive(Deserialize, Serialize)]
 pub struct Opponent {
-    pub tag: Arc<str>,
+    pub tag: Box<str>,
     pub action_value: i64,
 }
 
@@ -116,7 +117,7 @@ pub struct Opponent {
 pub struct BattleState {
     pub turn: i64,
     pub phase: i64,
-    pub current_turn_owner_tag: Arc<str>,
+    pub current_turn_owner_tag: Box<str>,
     pub action_value_cap: i64,
 }
 impl BattleState {

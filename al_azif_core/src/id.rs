@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Id {
-    pub tag: Arc<str>,
+    pub tag: Box<str>,
     pub ego: Ego,
     pub lvl: i64,
     pub xp: i64,
@@ -11,7 +11,7 @@ pub struct Id {
     pub points_to_distribute: i64,
     pub attributes: Attributes,
     pub color: Option<u32>,
-    pub current_battle: Option<Arc<str>>,
+    pub current_battle: Option<Box<str>>,
 }
 impl Id {
     pub fn new(tag: &str) -> Self {
