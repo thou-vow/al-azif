@@ -11,7 +11,7 @@ pub async fn try_interaction(bot: &impl AsBot, ctx: &Context, intr: &Interaction
             match args.next().unwrap() {
                 "prefix" => {},
                 "slash" => al_azif_slash::run_component(bot, ctx, comp, &args.collect::<Box<[&str]>>()).await?,
-                invalid => Err(anyhow!("Component is neither 'prefix' or 'slash': {invalid}"))?
+                invalid => unreachable!("Component is neither 'prefix' or 'slash': {invalid}")
             }
         },
         _ => {}

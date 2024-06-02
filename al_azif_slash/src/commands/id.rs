@@ -15,19 +15,19 @@ pub fn register() -> CreateCommand<'static> {
 
 pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> ResponseResult {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
-        return Err(anyhow!("The first argument of the 'id' command must be a subcommand!"));
+        unreachable!("The first argument of the 'id' command must be a subcommand!");
     };
 
     match args[0].name {
         "distribute" => distribute::run_command(bot, inner_args).await,
-        invalid => Err(anyhow!("Invalid command branch for 'id' command: {invalid}"))
+        invalid => unreachable!("Invalid command branch for 'id' command: {invalid}")
     }
 }
 
 pub async fn run_component(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction, args: &[&str]) -> ResponseResult {
     match args[0] {
         "distribute" => distribute::run_component(bot, ctx, comp, &args[1..]).await,
-        invalid => Err(anyhow!("Invalid component branch for 'id' components: {invalid}"))
+        invalid => unreachable!("Invalid component branch for 'id' components: {invalid}")
     }
 }
 
@@ -36,7 +36,7 @@ mod distribute {
 
     pub async fn run_command(bot: &impl AsBot, args: &[ResolvedOption<'_>]) -> ResponseResult {
         let ResolvedValue::String(id_tag) = args[0].value else {
-            return Err(anyhow!("The 'id' argument of the 'id distribute' command must be a string!"));
+            unreachable!("The 'id' argument of the 'id distribute' command must be a string!");
         };
         let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
             return simple_response("Informe um ID válido.", ResponseMode::Delete);
@@ -64,7 +64,7 @@ mod distribute {
             "goto_attributes" => {
                 components = generate_attribute_components(&*id_m.read().await).await?;
             },
-            invalid => return Err(anyhow!("Invalid operation on 'id distribute' component interaction: {invalid}"))
+            invalid => unreachable!("Invalid operation on 'id distribute' component interaction: {invalid}")
         }
     
         let embed = generate_embed(&*id_m.read().await).await?;
@@ -87,7 +87,7 @@ mod distribute {
             "dex" => id.attributes.dexterity += spent,
             "cog" => id.attributes.cognition += spent,
             "cha" => id.attributes.charisma += spent,
-            invalid => Err(anyhow!("Invalid invested attribute on 'id distribute' component interaction: {invalid}"))?
+            invalid => unreachable!("Invalid invested attribute on 'id distribute' component interaction: {invalid}")
         }
         
         id.points_to_distribute -= spent;

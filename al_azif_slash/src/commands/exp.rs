@@ -21,12 +21,12 @@ pub fn register() -> CreateCommand<'static> {
 
 pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> ResponseResult {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
-        return Err(anyhow!("The first argument of the 'exp' command must be a subcommand!"));
+        unreachable!("The first argument of the 'exp' command must be a subcommand!");
     };
 
     match args[0].name {
         "bestow" => bestow::run_command(bot, inner_args).await,
-        invalid => Err(anyhow!("Invalid command branch for 'exp' command: {invalid}"))
+        invalid => unreachable!("Invalid command branch for 'exp' command: {invalid}")
     }
 }
 
@@ -37,7 +37,7 @@ mod bestow {
         let mut blueprints = Vec::new();
         
         let ResolvedValue::String(id_tags) = args[0].value else {
-            return Err(anyhow!("The 'ids' argument of the 'exp bestow' command must be a string!"));
+            unreachable!("The 'ids' argument of the 'exp bestow' command must be a string!");
         };
         let (id_ms, invalid_tags) = parse_valid_entity_mirrors(
             bot, id_tags.split_ascii_whitespace()
@@ -57,7 +57,7 @@ mod bestow {
         }
 
         let ResolvedValue::Integer(value) = args[1].value else {
-            return Err(anyhow!("The 'value' argument of the 'exp bestow' command must be an integer!"));
+            unreachable!("The 'value' argument of the 'exp bestow' command must be an integer!");
         };
 
         for id_m in id_ms {

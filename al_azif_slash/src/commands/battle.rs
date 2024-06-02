@@ -28,14 +28,14 @@ pub fn register() -> CreateCommand<'static> {
 
 pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> ResponseResult {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
-        return Err(anyhow!("The first argument of the 'id' command must be a subcommand!"));
+        unreachable!("The first argument of the 'id' command must be a subcommand!");
     };
 
     match args[0].name {
         "end" => end::run_command(bot, slash).await,
         "join" => join::run_command(bot, slash, inner_args).await,
         "start" => start::run_command(bot, slash, inner_args).await,
-        invalid => Err(anyhow!("Invalid command branch for 'id' command: {invalid}"))
+        invalid => unreachable!("Invalid command branch for 'id' command: {invalid}")
     }
 }
 
@@ -71,7 +71,7 @@ mod join {
         };
 
         let ResolvedValue::String(id_tags) = args[0].value else {
-            return Err(anyhow!("The 'ids' argument of the 'battle start' command must be a string!"));
+            unreachable!("The 'ids' argument of the 'battle start' command must be a string!");
         };
 
         let mut blueprints = Vec::new();
@@ -130,7 +130,7 @@ mod start {
         }
 
         let ResolvedValue::String(id_tags) = args[0].value else {
-            return Err(anyhow!("The 'ids' argument of the 'battle start' command must be a string!"));
+            unreachable!("The 'ids' argument of the 'battle start' command must be a string!");
         };
 
         let mut blueprints = Vec::new();
