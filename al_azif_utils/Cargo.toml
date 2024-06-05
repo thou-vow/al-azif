@@ -3,3 +3,4 @@ name = "al_azif_utils"
 edition.workspace = true
 
 [dependencies]
+thiserror.workspace = true

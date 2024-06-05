@@ -7,5 +7,6 @@ al_azif_core.workspace = true
 al_azif_utils.workspace = true
 anyhow.workspace = true
 serenity.workspace = true
+thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
