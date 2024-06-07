@@ -1,3 +1,4 @@
+use rand::Rng;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -18,12 +19,14 @@ pub enum Token {
     Mul,
     Div,
     Exp,
+    Roll,
     OpenParen,
     CloseParen,
 }
 
 pub enum ASTNode {
     Number(f64),
+    NumberCollection(Vec<f64>),
     UnaryAdd(Box<ASTNode>),
     BinaryAdd(Box<ASTNode>, Box<ASTNode>),
     UnarySub(Box<ASTNode>),
@@ -31,6 +34,7 @@ pub enum ASTNode {
     Mul(Box<ASTNode>, Box<ASTNode>),
     Div(Box<ASTNode>, Box<ASTNode>),
     Exp(Box<ASTNode>, Box<ASTNode>),
+    Roll(Box<ASTNode>, Box<ASTNode>),
 }
 
 pub fn tokenize(expr: &str) -> Result<Vec<Token>, Error> {
@@ -80,6 +84,10 @@ pub fn tokenize(expr: &str) -> Result<Vec<Token>, Error> {
             },
             '^' => {
                 tokens.push(Token::Exp);
+                chars.next();
+            },
+            'd' => {
+                tokens.push(Token::Roll);
                 chars.next();
             },
             '(' => {
@@ -178,6 +186,23 @@ pub fn parse(tokens: &[Token]) -> Result<ASTNode, Error> {
     }
 
     fn parse_lvl_4(tokens: &[Token]) -> Result<(ASTNode, &[Token]), Error> {
+        let (mut left, mut tokens) = parse_lvl_5(tokens)?;
+
+        while let Some(token) = tokens.first() {
+            match token {
+                Token::Roll => {
+                    let (right, new_tokens) = parse_lvl_5(&tokens[1..])?;
+                    left = ASTNode::Roll(Box::new(left), Box::new(right));
+                    tokens = new_tokens;
+                },
+                _ => break,
+            };
+        }
+
+        Ok((left, tokens))
+    }
+
+    fn parse_lvl_5(tokens: &[Token]) -> Result<(ASTNode, &[Token]), Error> {
         if let Some(token) = tokens.first() {
             match token {
                 Token::Number(n) => {
@@ -206,6 +231,7 @@ pub fn parse(tokens: &[Token]) -> Result<ASTNode, Error> {
 pub fn evaluate(node: &ASTNode) -> Result<f64, Error> {
     match node {
         ASTNode::Number(n) => Ok(*n),
+        ASTNode::NumberCollection(n) => Ok(n.iter().sum::<f64>()),
         ASTNode::UnaryAdd(node) => Ok(evaluate(node)?),
         ASTNode::BinaryAdd(left, right) => Ok(evaluate(left)? + evaluate(right)?),
         ASTNode::UnarySub(node) => Ok(-evaluate(node)?),
@@ -213,5 +239,31 @@ pub fn evaluate(node: &ASTNode) -> Result<f64, Error> {
         ASTNode::Mul(left, right) => Ok(evaluate(left)? * evaluate(right)?),
         ASTNode::Div(left, right) => Ok(evaluate(left)? / evaluate(right)?),
         ASTNode::Exp(left, right) => Ok(evaluate(left)?.powf(evaluate(right)?)),
+        ASTNode::Roll(left, right) => {
+            let mut rng = rand::thread_rng();
+            let mut number_collection = Vec::new();
+
+            let left = evaluate(left)?;
+            if left < 1.0 {
+                number_collection.push(0.0);
+                return evaluate(&ASTNode::NumberCollection(number_collection));
+            }
+
+            let right = evaluate(right)?;
+
+            if right < 0.0 {
+                for _ in 0..left as usize {
+                    let n = rng.gen_range(right as isize..=0);
+                    number_collection.push(n as f64);
+                }
+            } else {
+                for _ in 0..left as usize {
+                    let n = rng.gen_range(0..=right as usize);
+                    number_collection.push(n as f64);
+                }
+            }
+            
+            evaluate(&ASTNode::NumberCollection(number_collection))
+        },
     }
 }

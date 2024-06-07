@@ -14,7 +14,11 @@ pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[
         unreachable!("The 'expression' argument of the 'calc' command must be a string!");
     };
 
-    let expr = match proccess_bracketed(bot, expr.split_whitespace().collect()).await
+    let expr = match proccess_bracketed(bot, expr.split_whitespace()
+            .collect::<String>()
+            .to_lowercase()
+        )
+        .await
         .map(|expr| expr.into_boxed_str())
     {
         Ok(expr) => expr,
@@ -58,7 +62,7 @@ pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[
         }}
     };
 
-    Ok((vec![ResponseBlueprint::default().content(f!("{expr} → {value}"))], ResponseMode::Normal))
+    Ok((vec![ResponseBlueprint::default().content(f!("``{expr}`` → {value}"))], ResponseMode::Normal))
 }
 
 #[derive(Debug, Error)]
