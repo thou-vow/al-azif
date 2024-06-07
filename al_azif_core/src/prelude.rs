@@ -9,11 +9,7 @@ pub use crate::{
     player::Player,
     response::{simple_response, ResponseBlueprint, ResponseMode, ResponseResult},
 };
-pub use al_azif_utils::{
-    calculator,
-    calculator::Error as CalcError,
-    mark_thousands,
-};
+pub use al_azif_utils::mark_thousands;
 pub use anyhow::{anyhow, Result};
 pub use derive_more::Display;
 pub use rand::Rng;
