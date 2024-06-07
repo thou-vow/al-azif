@@ -1,7 +1,6 @@
 mod commands {
     pub mod battle;
     pub mod exp;
-    pub mod calc;
     pub mod id;
     pub mod ping;
 }
@@ -12,7 +11,6 @@ use crate::prelude::*;
 pub async fn register_commands(bot: &impl AsBot, ctx: &Context) -> Result<()> {
     bot.get_main_guild().set_commands(&ctx.http, &[
         battle::register(),
-        calc::register(),
         exp::register(),
         id::register(),
     ]).await?;
@@ -24,7 +22,6 @@ pub async fn run_command(bot: &impl AsBot, ctx: &Context, slash: &CommandInterac
     let execution_result = match slash.data.name.as_str() {
         "battle" => battle::run_command(bot, slash, &slash.data.options()).await,
         "exp" => exp::run_command(bot, slash, &slash.data.options()).await,
-        "calc" => calc::run_command(bot, slash, &slash.data.options()).await,
         "id" => id::run_command(bot, slash, &slash.data.options()).await,
         "ping" => ping::run_command(ctx, slash).await,
         _ => return Ok(()),
