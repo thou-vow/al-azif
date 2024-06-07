@@ -20,6 +20,10 @@ impl ResponseBlueprint {
         self.embeds = embeds.into();
         self
     }
+    pub fn ephemeral(mut self, ephemeral: bool) -> Self {
+        self.ephemeral = ephemeral;
+        self
+    }
     pub fn components(mut self, components: impl Into<Cow<'static, [CreateActionRow<'static>]>>) -> Self {
         self.components = components.into();
         self

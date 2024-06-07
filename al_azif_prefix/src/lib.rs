@@ -1,5 +1,6 @@
 mod commands {
     pub mod attack;
+    pub mod dodge;
 }
 pub mod prelude;
 
@@ -8,11 +9,16 @@ use crate::prelude::*;
 pub async fn run_command(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Result<()> {
     let mut args = msg.content[PREFIX.len()..].split_ascii_whitespace();
 
-    let cmd_name = args.next().unwrap();
-    let execution_result = match cmd_name {
-        _ if attack::ALIASES.contains(&cmd_name) => attack::run_command(bot, msg, &args.collect::<Box<[&str]>>()).await,
-        _ => return Ok(()),
+    let cmd_name = args.next().unwrap().to_lowercase();
+    
+    let execution_result = if attack::ALIASES.contains(&cmd_name.as_str()) {
+        attack::run_command(bot, msg, &args.collect::<Box<[&str]>>()).await
+    } else if dodge::ALIASES.contains(&cmd_name.as_str()) {
+        dodge::run_command(bot, msg).await
+    } else {
+        return Ok(())
     };
+    
     let (blueprints, mode) = execution_result?;
 
     let responses = 'execute_blueprints: {

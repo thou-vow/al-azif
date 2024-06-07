@@ -123,17 +123,17 @@ impl Attributes {
 
 #[derive(Deserialize, Serialize)]
 pub enum Gender {
-    Other,
-    Female,
-    Male,
+    Other = 0,
+    Female = 1,
+    Male = 2,
 }
 
 #[derive(Deserialize, Serialize)]
 pub enum Age {
-    Child,
-    Teen,
-    Young,
-    Adult,
-    MiddleAged,
-    Senior,
+    Child = 1,
+    Teen = 2,
+    Young = 3,
+    Adult = 4,
+    MiddleAged = 5,
+    Senior = 6,
 }

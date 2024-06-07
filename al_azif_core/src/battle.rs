@@ -29,7 +29,7 @@ impl Battle {
         }
         
         loop {
-            if let Some(next_turn_owner_tag) = self.get_next_turn_owner() {
+            if let Some(next_turn_owner_tag) = self.get_next_turn_owner().map(Box::from) {
                 blueprints.extend(
                     Mirror::<Id>::get(bot, &next_turn_owner_tag).await?
                         .write().await.start_turn(self).await?
@@ -84,7 +84,7 @@ impl Battle {
 
         Ok(blueprints)
     }
-    fn get_next_turn_owner(&self) -> Option<Box<str>> {
+    fn get_next_turn_owner(&self) -> Option<&str> {
         self.opponents.iter()
             .max_by(|(_, opponent1), (_, opponent2)| {
                 let order = opponent1.action_value.cmp(&opponent2.action_value);
@@ -97,7 +97,7 @@ impl Battle {
                 order
             })
             .filter(|(_, opponent)| opponent.action_value >= self.state.action_value_cap)
-            .map(|(tag, _)| tag.clone())
+            .map(|(id_tag, _)| id_tag.as_ref())
     }
 }
 impl Reflective for Battle {
