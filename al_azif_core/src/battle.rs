@@ -4,22 +4,28 @@ use crate::prelude::*;
 pub struct Battle {
     pub tag: Box<str>,
     pub opponents: HashMap<Box<str>, Opponent>,
-    pub state: BattleState,
+    pub turn: i64,
+    pub phase: i64,
+    pub current_turn_owner_tag: Box<str>,
+    pub action_value_cap: i64,
 }
 impl Battle {
     pub fn new(tag: &str) -> Self {
         Self {
             tag: tag.into(),
             opponents: HashMap::new(),
-            state: BattleState::new(),
+            turn: 0,
+            phase: 0,
+            current_turn_owner_tag: "".into(),
+            action_value_cap: 0,
         }
     }
     pub async fn advance(&mut self, bot: &impl AsBot) -> Result<Vec<ResponseBlueprint>> {
         let mut blueprints = Vec::new();
 
         if let Some(current_turn_owner_tag) = self.opponents
-            .contains_key(&self.state.current_turn_owner_tag)
-            .then(|| self.state.current_turn_owner_tag.clone())
+            .contains_key(&self.current_turn_owner_tag)
+            .then(|| self.current_turn_owner_tag.clone())
         {
             blueprints.extend(
                 Mirror::<Id>::get(bot, &current_turn_owner_tag).await?
@@ -34,12 +40,12 @@ impl Battle {
                     Mirror::<Id>::get(bot, &next_turn_owner_tag).await?
                         .write().await.start_turn(self).await?
                 );
-                self.state.turn += 1;
-                self.state.current_turn_owner_tag = next_turn_owner_tag;
+                self.turn += 1;
+                self.current_turn_owner_tag = next_turn_owner_tag;
                 break;
             }
 
-            self.state.phase += 1;
+            self.phase += 1;
             blueprints.extend(self.start_next_phase(bot).await?);
         }
 
@@ -49,7 +55,7 @@ impl Battle {
         let mut desc = String::new();
 
         for (id_tag, opponent) in &self.opponents {
-            let number_of_filled_squares = (opponent.action_value * 10 / self.state.action_value_cap).clamp(0, 10) as usize;
+            let number_of_filled_squares = (opponent.action_value * 10 / self.action_value_cap).clamp(0, 10) as usize;
             let filled_portion = "⬜".repeat(number_of_filled_squares);
             let empty_portion = "⬛".repeat(10 - number_of_filled_squares);
 
@@ -59,12 +65,12 @@ impl Battle {
             desc += &f!("**{}** [``{id_tag}``]\n{filled_portion}{empty_portion} {} / {}\n\n",
                 id.ego.name,
                 mark_thousands(opponent.action_value),
-                mark_thousands(self.state.action_value_cap)
+                mark_thousands(self.action_value_cap)
             );
         }
 
         let embed = CreateEmbed::default()
-            .title(f!("Fase: {}", self.state.phase))
+            .title(f!("Fase: {}", self.phase))
             .description(desc);
 
         Ok(ResponseBlueprint::default().embeds(vec![embed]))
@@ -96,7 +102,7 @@ impl Battle {
                 }
                 order
             })
-            .filter(|(_, opponent)| opponent.action_value >= self.state.action_value_cap)
+            .filter(|(_, opponent)| opponent.action_value >= self.action_value_cap)
             .map(|(id_tag, _)| id_tag.as_ref())
     }
 }
@@ -111,22 +117,4 @@ impl Reflective for Battle {
 pub struct Opponent {
     pub tag: Box<str>,
     pub action_value: i64,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct BattleState {
-    pub turn: i64,
-    pub phase: i64,
-    pub current_turn_owner_tag: Box<str>,
-    pub action_value_cap: i64,
-}
-impl BattleState {
-    pub fn new() -> Self {
-        Self {
-            turn: 0,
-            phase: 0,
-            current_turn_owner_tag: "".into(),
-            action_value_cap: 0,
-        }
-    }
 }

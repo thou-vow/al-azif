@@ -38,8 +38,8 @@ impl Id {
 
         battle.opponents.insert(self.tag.clone(), opponent);
 
-        if battle.state.action_value_cap < self.attributes.movement {
-            battle.state.action_value_cap = self.attributes.movement;
+        if battle.action_value_cap < self.attributes.movement {
+            battle.action_value_cap = self.attributes.movement;
         }
         
         self.current_battle = Some(battle.tag.clone());
@@ -59,7 +59,7 @@ impl Id {
     pub async fn end_turn(&mut self, battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
         let mut blueprints = Vec::new();
 
-        battle.opponents.get_mut(&self.tag).unwrap().action_value -= battle.state.action_value_cap;
+        battle.opponents.get_mut(&self.tag).unwrap().action_value -= battle.action_value_cap;
 
         blueprints.push(ResponseBlueprint {
             content: Some(f!("Fim do turno de {} [``{}``].",

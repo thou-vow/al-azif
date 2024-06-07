@@ -1,5 +1,5 @@
 pub use crate::{
-    battle::{Battle, BattleState, Opponent},
+    battle::{Battle, Opponent},
     bot::{AsBot, InMemoryDatabase},
     constants::*,
     database,
