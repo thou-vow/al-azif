@@ -1,24 +1,27 @@
 pub use crate::{
-    battle::{Battle, Opponent},
+    battle::{advance, Battle, Moment, Opponent},
     bot::{AsBot, InMemoryDatabase},
     constants::*,
     database,
     database::Reflective,
-    id::{Attributes, Ego, Id},
+    id::{Age, Gender, Id},
     mirror::{InMemoryStore, Mirror, ReadMirror, WriteMirror},
     player::Player,
-    response::{simple_response, ResponseBlueprint, ResponseMode, ResponseResult},
+    response::{simple_send_response, ResponseModel, ResponseBlueprint},
 };
-pub use al_azif_utils::mark_thousands;
+pub use al_azif_utils::{mark_thousands, math};
 pub use anyhow::{anyhow, Result};
 pub use derive_more::Display;
 pub use rand::Rng;
 pub use serde::{Deserialize, Serialize};
 pub use serenity::all::*;
+pub use small_fixed_array::{FixedArray, FixedString};
 pub use std::{
     borrow::Cow,
-    cmp::{max, min, Ordering},
-    collections::HashMap,
+    cmp::{max, min, Ordering, Reverse},
+    collections::{HashMap, HashSet},
+    fmt,
+    fmt::{Display, Formatter},
     format as f,
     fs,
     ops::{Deref, DerefMut},

@@ -1,6 +1,8 @@
+use std::vec;
+
 use crate::prelude::*;
 
-pub async fn run_command(ctx: &Context, slash: &CommandInteraction) -> ResponseResult {
+pub async fn run_command(ctx: &Context, slash: &CommandInteraction) -> Result<Vec<ResponseModel>> {
     let initial_point = Instant::now();
 
     slash.create_response(&ctx.http, CreateInteractionResponse::Defer(
@@ -13,5 +15,5 @@ pub async fn run_command(ctx: &Context, slash: &CommandInteraction) -> ResponseR
         EditInteractionResponse::new().content(f!("Latência atual: {elapsed}ms"))
     ).await?;
     
-    Ok((Vec::new(), ResponseMode::Normal))
+    Ok(vec![])
 }

@@ -26,7 +26,7 @@ pub fn register() -> CreateCommand<'static> {
         )
 }
 
-pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> ResponseResult {
+pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
         unreachable!("The first argument of the 'id' command must be a subcommand!");
     };
@@ -42,10 +42,10 @@ pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[R
 mod end {
     use super::*;
 
-    pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction) -> ResponseResult {
+    pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Vec<ResponseModel>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return simple_response("Não há uma batalha neste canal.", ResponseMode::Delete);
+            return simple_send_response("Não há uma batalha neste canal.", false);
         };
 
         let battle = battle_m.read().await;
@@ -57,17 +57,17 @@ mod end {
 
         Mirror::<Battle>::cut(bot, &battle_tag).await?;
 
-        simple_response("Batalha finalizada.", ResponseMode::Normal)
+        simple_send_response("Batalha finalizada.", false)
     }
 }
 
 mod join {
     use super::*;
 
-    pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> ResponseResult {
+    pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return simple_response("Não há uma batalha neste canal.", ResponseMode::Delete);
+            return simple_send_response("Não há uma batalha neste canal.", false);
         };
 
         let ResolvedValue::String(id_tags) = args[0].value else {
@@ -106,7 +106,7 @@ mod join {
 
         if id_ms.is_empty() {
             blueprints.push(ResponseBlueprint::default().content("Nenhum Id entrou na batalha."));
-            return Ok((blueprints, ResponseMode::Delete));
+            return Ok(vec![ResponseModel::send(blueprints)]);
         }
 
         let mut battle = battle_m.write().await;
@@ -116,17 +116,17 @@ mod join {
 
         blueprints.push(battle.generate_turn_screen(bot).await?);
 
-        Ok((blueprints, ResponseMode::Normal))
+        Ok(vec![ResponseModel::send(blueprints)])
     }
 }
 
 mod start {
     use super::*;
 
-    pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> ResponseResult {
+    pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         if Mirror::<Battle>::get(bot, &battle_tag).await.is_ok() {
-            return simple_response("Já está ocorrendo uma batalha neste canal.", ResponseMode::Delete);
+            return simple_send_response("Já está ocorrendo uma batalha neste canal.", false);
         }
 
         let ResolvedValue::String(id_tags) = args[0].value else {
@@ -165,17 +165,19 @@ mod start {
 
         if id_ms.len() < 2 {
             blueprints.push(ResponseBlueprint::default().content("Você precisa de pelo menos 2 Ids para iniciar uma batalha."));
-            return Ok((blueprints, ResponseMode::Delete));
+            return Ok(vec![ResponseModel::send(blueprints)]);
         }
 
         let mut battle = Battle::new(&battle_tag);
         for id_m in id_ms {
             id_m.write().await.join_battle(&mut battle).await;
         }
-        blueprints.extend(battle.advance(bot).await?);
+
+        
+        blueprints.extend(advance(bot, &mut battle).await?);
         blueprints.push(battle.generate_turn_screen(bot).await?);
         Mirror::<Battle>::set_and_get(bot, battle).await?;
 
-        Ok((blueprints, ResponseMode::Normal))
+        Ok(vec![ResponseModel::send(blueprints)])
     }
 }

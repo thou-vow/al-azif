@@ -26,39 +26,41 @@ pub async fn run_command(bot: &impl AsBot, ctx: &Context, slash: &CommandInterac
         "ping" => ping::run_command(ctx, slash).await,
         _ => return Ok(()),
     };
-    let (blueprints, mode) = execution_result?;
 
-    let responses = 'execute_blueprints: {
-        let mut responses = Vec::new();
-        
-        let Some(first_blueprint) = blueprints.first() else {
-            break 'execute_blueprints responses;
-        };
-    
-        slash.create_response(&ctx.http, CreateInteractionResponse::Message(
-            CreateInteractionResponseMessage::from(first_blueprint.clone())
-        )).await?;
-        responses.push(ctx.http.get_original_interaction_response(&slash.token).await?);
+    let models = execution_result?;
 
-        for blueprint in blueprints.iter().skip(1) {
-            responses.push(slash.channel_id.send_message(&ctx.http,
-                CreateMessage::from(blueprint.clone())
-            ).await?);
+    for model in models {
+        match model {
+            ResponseModel::Send { blueprints } => {
+                let Some(first_blueprint) = blueprints.first() else {
+                    return Ok(());
+                };
+
+                slash.create_response(&ctx.http, CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::from(first_blueprint.clone())
+                )).await?;
+
+                for blueprint in blueprints.iter().skip(1) {
+                    slash.channel_id.send_message(&ctx.http,
+                        CreateMessage::from(blueprint.clone())
+                    ).await?;
+                }
+            },
+            ResponseModel::SendEphemeral { blueprint  } => {
+                slash.create_response(&ctx.http, CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::from(blueprint.clone())
+                        .ephemeral(true)
+                )).await?;
+            },
+            ResponseModel::SendLoose { blueprints } => {
+                for blueprint in blueprints {
+                    slash.channel_id.send_message(&ctx.http,
+                        CreateMessage::from(blueprint.clone())
+                    ).await?;
+                }
+            },
+            _ => unreachable!("Unsupported ResponseModel for slash command: {:?}", model),
         }
-
-        responses
-    };
-
-    match mode {
-        ResponseMode::Delete => {
-            tokio::time::sleep(Duration::from_secs(10)).await;
-            
-            for response in responses.iter().rev() {
-                response.delete(&ctx.http, None).await?;
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-        }
-        ResponseMode::Normal => {},
     }
     
     Ok(())
@@ -66,42 +68,48 @@ pub async fn run_command(bot: &impl AsBot, ctx: &Context, slash: &CommandInterac
 
 pub async fn run_component(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction, args: &[&str]) -> Result<()> {
     let execution_result = match args[0] {
-        "id" => id::run_component(bot, ctx, comp, &args[1..]).await,
+        "id" => id::run_component(bot, comp, &args[1..]).await,
         _ => return Ok(()),
     };
-    let (blueprints, mode) = execution_result?;
-    
-    let responses = 'execute_blueprints: {
-        let mut responses = Vec::new();
-        
-        let Some(first_blueprint) = blueprints.first() else {
-            break 'execute_blueprints responses;
-        };
-    
-        comp.create_response(&ctx.http, CreateInteractionResponse::Message(
-            CreateInteractionResponseMessage::from(first_blueprint.clone())
-        )).await?;
-        responses.push(ctx.http.get_original_interaction_response(&comp.token).await?);
 
-        for blueprint in blueprints.iter().skip(1) {
-            responses.push(comp.channel_id.send_message(&ctx.http,
-                CreateMessage::from(blueprint.clone())
-            ).await?);
+    let models = execution_result?;
+
+    for model in models {
+        match model {
+            ResponseModel::Send { blueprints } => {
+                let Some(first_blueprint) = blueprints.first() else {
+                    return Ok(());
+                };
+
+                comp.create_response(&ctx.http, CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::from(first_blueprint.clone())
+                )).await?;
+
+                for blueprint in blueprints.iter().skip(1) {
+                    comp.channel_id.send_message(&ctx.http,
+                        CreateMessage::from(blueprint.clone())
+                    ).await?;
+                }
+            },
+            ResponseModel::SendEphemeral { blueprint  } => {
+                comp.create_response(&ctx.http, CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::from(blueprint.clone())
+                        .ephemeral(true)
+                )).await?;
+            },
+            ResponseModel::SendLoose { blueprints } => {
+                for blueprint in blueprints {
+                    comp.channel_id.send_message(&ctx.http,
+                        CreateMessage::from(blueprint.clone())
+                    ).await?;
+                }
+            },
+            ResponseModel::Update { blueprint } => {
+                comp.create_response(&ctx.http, CreateInteractionResponse::UpdateMessage(
+                    CreateInteractionResponseMessage::from(blueprint.clone())
+                )).await?;
+            },
         }
-
-        responses
-    };
-
-    match mode {
-        ResponseMode::Delete => {
-            tokio::time::sleep(Duration::from_secs(10)).await;
-            
-            for response in responses.iter().rev() {
-                response.delete(&ctx.http, None).await?;
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-        }
-        ResponseMode::Normal => {},
     }
 
     Ok(())

@@ -1,3 +1,6 @@
 [package]
 name = "al_azif_utils"
 edition.workspace = true
+
+[dependencies]
+rand.workspace = true

@@ -9,10 +9,12 @@ Cargo.lock
 
 # Secrets
 .env
+assets/*
 database/*
 tests
 
 # But will track the directories
+!assets/music/
 !database/battles/
 !database/ids/
 !database/players/

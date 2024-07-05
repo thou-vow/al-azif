@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-pub type InMemoryStore<T> = Mutex<HashMap<Box<str>, (Arc<RwLock<T>>, Instant)>>;
+pub type InMemoryStore<T> = Mutex<HashMap<FixedString, (Arc<RwLock<T>>, Instant)>>;
 
 pub struct Mirror<T: Reflective> {
     lock: Arc<RwLock<T>>,
@@ -13,7 +13,7 @@ impl<T: Reflective> Mirror<T> {
         let Some((value_lock, instant)) = store.get_mut(tag) else {
             let value_lock = Arc::new(RwLock::new(database::get::<T>(tag)?));
 
-            store.insert(tag.into(), (value_lock.clone(), Instant::now()));
+            store.insert(FixedString::from_str_trunc(tag), (value_lock.clone(), Instant::now()));
 
             return Ok(Self { lock: value_lock });
         };
@@ -25,7 +25,7 @@ impl<T: Reflective> Mirror<T> {
     pub async fn set_and_get(store_lock: impl AsRef<InMemoryStore<T>>, value: T) -> Result<Self> {
         database::set(&value)?;
 
-        let tag = value.get_tag().into();
+        let tag = FixedString::from_str_trunc(value.get_tag());
 
         let store_lock = store_lock.as_ref();
         let mut store = store_lock.lock().await;

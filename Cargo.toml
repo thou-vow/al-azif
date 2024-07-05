@@ -20,7 +20,8 @@ derive_more = { version = "0.99.17", default-features = false, features = ["disp
 dotenvy = { version = "0.15.7", default-features = false }
 rand = { version = "0.8.5", default-features = false }
 serde = { version = "1.0.200", default-features = false, features = ["rc"] }
-serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next", default-features = false, features = ["client", "gateway", "model", "rustls_backend"] }
+serenity = { git = "https://github.com/thou-vow/serenity", branch = "next", default-features = false, features = ["client", "gateway", "model", "rustls_backend"] }
+small-fixed-array = { version = "0.4.4", features = ["serde"] }
 thiserror = "1.0.61"
 tokio = { version = "1.37.0", features = ["rt-multi-thread"] }
 tracing = { version = "0.1.40", default-features = false }
@@ -40,6 +41,9 @@ serenity.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+[dev-dependencies]
+rand.workspace = true
 
 [profile.release]
 strip = true

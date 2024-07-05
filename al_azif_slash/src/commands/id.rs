@@ -13,7 +13,7 @@ pub fn register() -> CreateCommand<'static> {
         )
 }
 
-pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> ResponseResult {
+pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
         unreachable!("The first argument of the 'id' command must be a subcommand!");
     };
@@ -24,9 +24,9 @@ pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[
     }
 }
 
-pub async fn run_component(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction, args: &[&str]) -> ResponseResult {
+pub async fn run_component(bot: &impl AsBot, _comp: &ComponentInteraction, args: &[&str]) -> Result<Vec<ResponseModel>> {
     match args[0] {
-        "distribute" => distribute::run_component(bot, ctx, comp, &args[1..]).await,
+        "distribute" => distribute::run_component(bot, &args[1..]).await,
         invalid => unreachable!("Invalid component branch for 'id' components: {invalid}")
     }
 }
@@ -34,22 +34,22 @@ pub async fn run_component(bot: &impl AsBot, ctx: &Context, comp: &ComponentInte
 mod distribute {
     use super::*;
 
-    pub async fn run_command(bot: &impl AsBot, args: &[ResolvedOption<'_>]) -> ResponseResult {
+    pub async fn run_command(bot: &impl AsBot, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
         let ResolvedValue::String(id_tag) = args[0].value else {
             unreachable!("The 'id' argument of the 'id distribute' command must be a string!");
         };
         let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
-            return simple_response("Informe um ID válido.", ResponseMode::Delete);
+            return simple_send_response("Informe um ID válido.", false);
         };
     
         let id = id_m.read().await;
         let embed = generate_embed(&id).await?;
         let components = generate_attribute_components(&id).await?;
         
-        Ok((vec![ResponseBlueprint::default().embeds(vec![embed]).components(components)], ResponseMode::Normal))
+        Ok(vec![ResponseModel::send(vec![ResponseBlueprint::default().embeds(vec![embed]).components(components)])])
     }
 
-    pub async fn run_component(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction, args: &[&str]) -> ResponseResult {
+    pub async fn run_component(bot: &impl AsBot, args: &[&str]) -> Result<Vec<ResponseModel>> {
         let id_m = Mirror::<Id>::get(bot, args[0]).await?;
         
         let components;
@@ -68,25 +68,21 @@ mod distribute {
         }
     
         let embed = generate_embed(&*id_m.read().await).await?;
-    
-        comp.create_response(&ctx.http, CreateInteractionResponse::UpdateMessage(
-            CreateInteractionResponseMessage::new().embed(embed).components(components)
-        )).await?;
         
-        Ok((vec![], ResponseMode::Normal))
+        Ok(vec![ResponseModel::update(ResponseBlueprint::default().embeds(vec![embed]).components(components))])
     }
 
     async fn invest(id: &mut Id, attribute_str: &str, selected_value: i64) -> Result<()> {
         let spent = min(selected_value, id.points_to_distribute);
 
         match attribute_str {
-            "con" => id.attributes.constitution += spent,
-            "spr" => id.attributes.spirit += spent,
-            "mgt" => id.attributes.might += spent,
-            "mov" => id.attributes.movement += spent,
-            "dex" => id.attributes.dexterity += spent,
-            "cog" => id.attributes.cognition += spent,
-            "cha" => id.attributes.charisma += spent,
+            "con" => id.constitution += spent,
+            "spr" => id.spirit += spent,
+            "mgt" => id.might += spent,
+            "mov" => id.movement += spent,
+            "dex" => id.dexterity += spent,
+            "cog" => id.cognition += spent,
+            "cha" => id.charisma += spent,
             invalid => unreachable!("Invalid invested attribute on 'id distribute' component interaction: {invalid}")
         }
         
@@ -97,16 +93,16 @@ mod distribute {
 
     async fn generate_embed(id: &Id) -> Result<CreateEmbed<'static>> {
         let mut attributes_field = String::new();
-        attributes_field += &f!("{CON_EMOJI} `{CON_SHORT}` {}\n", mark_thousands(id.attributes.constitution));
-        attributes_field += &f!("{SPR_EMOJI} `{SPR_SHORT}` {}\n", mark_thousands(id.attributes.spirit));
-        attributes_field += &f!("{MGT_EMOJI} `{MGT_SHORT}` {}\n", mark_thousands(id.attributes.might));
-        attributes_field += &f!("{MOV_EMOJI} `{MOV_SHORT}` {}\n", mark_thousands(id.attributes.movement));
-        attributes_field += &f!("{DEX_EMOJI} `{DEX_SHORT}` {}\n", mark_thousands(id.attributes.dexterity));
-        attributes_field += &f!("{COG_EMOJI} `{COG_SHORT}` {}\n", mark_thousands(id.attributes.cognition));
-        attributes_field += &f!("{CHA_EMOJI} `{CHA_SHORT}` {}\n", mark_thousands(id.attributes.charisma));
+        attributes_field += &f!("{CON_EMOJI} `{CON_SHORT}` {}\n", mark_thousands(id.constitution));
+        attributes_field += &f!("{SPR_EMOJI} `{SPR_SHORT}` {}\n", mark_thousands(id.spirit));
+        attributes_field += &f!("{MGT_EMOJI} `{MGT_SHORT}` {}\n", mark_thousands(id.might));
+        attributes_field += &f!("{MOV_EMOJI} `{MOV_SHORT}` {}\n", mark_thousands(id.movement));
+        attributes_field += &f!("{DEX_EMOJI} `{DEX_SHORT}` {}\n", mark_thousands(id.dexterity));
+        attributes_field += &f!("{COG_EMOJI} `{COG_SHORT}` {}\n", mark_thousands(id.cognition));
+        attributes_field += &f!("{CHA_EMOJI} `{CHA_SHORT}` {}\n", mark_thousands(id.charisma));
     
         let embed = CreateEmbed::new()
-            .title(f!("{} 🎊 [{}]", id.ego.name, mark_thousands(id.lvl)))
+            .title(f!("{} 🎊 [{}]", id.name, mark_thousands(id.lvl)))
             .color(id.color.unwrap_or(0x36393e))
             .description(f!("{} / {}", mark_thousands(id.xp), mark_thousands(xp_to_next_level(id.lvl))))
             .field("", attributes_field, false)

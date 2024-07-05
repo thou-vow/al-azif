@@ -1,3 +1,5 @@
+pub mod math;
+
 pub fn mark_thousands(num: i64) -> String {
     let mut formatted_num = num
         .abs()

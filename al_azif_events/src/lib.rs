@@ -9,7 +9,7 @@ pub async fn try_interaction(bot: &impl AsBot, ctx: &Context, intr: &Interaction
             let mut args = comp.data.custom_id.split(' ');
             
             match args.next().unwrap() {
-                "prefix" => {},
+                "prefix" => al_azif_prefix::run_component(bot, ctx, comp, &args.collect::<Box<[&str]>>()).await?,
                 "slash" => al_azif_slash::run_component(bot, ctx, comp, &args.collect::<Box<[&str]>>()).await?,
                 invalid => unreachable!("Component is neither 'prefix' or 'slash': {invalid}")
             }

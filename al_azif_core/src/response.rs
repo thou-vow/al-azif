@@ -1,13 +1,34 @@
 use crate::prelude::*;
 
-pub type ResponseResult = Result<(Vec<ResponseBlueprint>, ResponseMode)>;
+#[derive(Debug)]
+pub enum ResponseModel {
+    Send { blueprints: Vec<ResponseBlueprint> },
+    // Only for interactions
+    SendEphemeral { blueprint: ResponseBlueprint },
+    SendLoose { blueprints: Vec<ResponseBlueprint> },
+    // Only for component-based interactions
+    Update { blueprint: ResponseBlueprint },
+}
+impl ResponseModel {
+    pub fn send(blueprints: Vec<ResponseBlueprint>) -> Self {
+        Self::Send { blueprints }
+    }
+    pub fn send_ephemeral(blueprint: ResponseBlueprint) -> Self {
+        Self::SendEphemeral { blueprint }
+    }
+    pub fn send_loose(blueprints: Vec<ResponseBlueprint>) -> Self {
+        Self::SendLoose { blueprints }
+    }
+    pub fn update(blueprint: ResponseBlueprint) -> Self {
+        Self::Update { blueprint }
+    }
+}
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ResponseBlueprint {
     pub content: Option<Cow<'static, str>>,
     pub embeds: Cow<'static, [CreateEmbed<'static>]>,
     pub attachments: Vec<CreateAttachment<'static>>,
-    pub ephemeral: bool,
     pub components: Cow<'static, [CreateActionRow<'static>]>,
     pub allowed_mentions: Option<CreateAllowedMentions<'static>>,
 }
@@ -20,10 +41,6 @@ impl ResponseBlueprint {
         self.embeds = embeds.into();
         self
     }
-    pub fn ephemeral(mut self, ephemeral: bool) -> Self {
-        self.ephemeral = ephemeral;
-        self
-    }
     pub fn components(mut self, components: impl Into<Cow<'static, [CreateActionRow<'static>]>>) -> Self {
         self.components = components.into();
         self
@@ -34,7 +51,6 @@ impl From<ResponseBlueprint> for CreateInteractionResponseMessage<'static> {
         let mut into = Self::default()
             .embeds(value.embeds)
             .add_files(value.attachments)
-            .ephemeral(value.ephemeral)
             .components(value.components);
 
         if let Some(content) = value.content {
@@ -65,16 +81,20 @@ impl From<ResponseBlueprint> for CreateMessage<'static> {
     }
 }
 
-pub enum ResponseMode {
-    Normal,
-    Delete,
-}
-
-pub fn simple_response(content: impl Into<Cow<'static, str>>, mode: ResponseMode) -> ResponseResult {
-    Ok((vec![
-        ResponseBlueprint {
-            content: Some(content.into()),
-           ..Default::default()
-        },
-    ], mode))
+pub fn simple_send_response(content: impl Into<Cow<'static, str>>, ephemeral: bool) -> Result<Vec<ResponseModel>> {
+    if ephemeral {
+        Ok(vec![ResponseModel::SendEphemeral { 
+            blueprint: ResponseBlueprint {
+                content: Some(content.into()),
+               ..Default::default()
+            }
+        }])
+    } else {
+        Ok(vec![ResponseModel::Send {
+            blueprints: vec![ResponseBlueprint {
+                content: Some(content.into()),
+               ..Default::default()
+            }]
+        }])
+    }
 }

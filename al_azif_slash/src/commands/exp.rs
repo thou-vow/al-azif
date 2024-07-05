@@ -19,7 +19,7 @@ pub fn register() -> CreateCommand<'static> {
         )
 }
 
-pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> ResponseResult {
+pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
         unreachable!("The first argument of the 'exp' command must be a subcommand!");
     };
@@ -33,7 +33,7 @@ pub async fn run_command(bot: &impl AsBot, _slash: &CommandInteraction, args: &[
 mod bestow {
     use super::*;
 
-    pub async fn run_command(bot: &impl AsBot, args: &[ResolvedOption<'_>]) -> ResponseResult {
+    pub async fn run_command(bot: &impl AsBot, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
         let mut blueprints = Vec::new();
         
         let ResolvedValue::String(id_tags) = args[0].value else {
@@ -52,8 +52,7 @@ mod bestow {
 
         if id_ms.is_empty() {
             blueprints.push(ResponseBlueprint::default().content("Você precisa de pelo menos uma entidade para conceder experiência."));
-    
-            return Ok((blueprints, ResponseMode::Delete));
+            return Ok(vec![ResponseModel::send(blueprints)]);
         }
 
         let ResolvedValue::Integer(value) = args[1].value else {
@@ -78,7 +77,7 @@ mod bestow {
                     "{} obteve {} de experiência e subiu de nível! [{} ➜ {}]
                     Pode distribuir {} pontos nos atributos.
                     Falta {} de experiência para o próximo nível.",
-                    id.ego.name,
+                    id.name,
                     mark_thousands(value),
                     mark_thousands(previous_lvl),
                     mark_thousands(id.lvl),
@@ -88,14 +87,14 @@ mod bestow {
             } else {
                 blueprints.push(ResponseBlueprint::default().content(f!(
                     "{} obteve {} de experiência. Falta {} para o próximo nível.",
-                    id.ego.name,
+                    id.name,
                     mark_thousands(value),
                     mark_thousands(xp_to_next_level(id.lvl) - id.xp))
                 ));
             }
         }
 
-       Ok((blueprints, ResponseMode::Normal))
+       Ok(vec![ResponseModel::send(blueprints)])
     }
 
     async fn parse_valid_entity_mirrors<'a>(bot: &impl AsBot, id_tags: impl Iterator<Item = &'a str>) -> (Vec<Mirror<Id>>, Vec<&'a str>) {

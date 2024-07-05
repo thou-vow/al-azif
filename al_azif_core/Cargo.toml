@@ -11,6 +11,7 @@ derive_more.workspace = true
 rand.workspace = true
 serde.workspace = true
 serenity.workspace = true
+small-fixed-array.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
