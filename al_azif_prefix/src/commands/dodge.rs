@@ -33,7 +33,12 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message) -> Result<Vec<Response
             "Aguardando interação...", true
         );
 
-    battle.current_moment = Moment::Defending;
+    battle.current_moment = Moment::AttackReact { 
+        action_tag: action_tag.clone(),
+        user_tag: attacker_tag.clone(),
+        target_tag: user_tag.clone() 
+    };
+    
     let battle = battle.downgrade()?;
 
     let button_row = CreateActionRow::Buttons(vec![
