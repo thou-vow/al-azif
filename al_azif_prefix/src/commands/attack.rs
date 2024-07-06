@@ -64,10 +64,6 @@ fn generate_preliminary_responses(user: &Id, target: &Id) -> Vec<ResponseBluepri
 fn generate_forecast_responses(user: &Id, target: &Id) -> Vec<ResponseBlueprint> {
     let evaluated_damage = target.evaluate_damage_to_receive(user.might);
 
-    println!("{evaluated_damage} evaluated damage, {} max hp, {} formula result",
-        target.constitution * 10, evaluated_damage * 100 / (target.constitution * 10)
-    );
-
     let content = match evaluated_damage * 100 / (target.constitution * 10) {
         0..=5 => "🔎 | Parece que irá causar um dano leve.",
         6..=10 => "🔎 | Parece que irá causar um dano moderado.",
