@@ -80,7 +80,12 @@ pub struct Opponent {
 #[derive(Deserialize, Serialize)]
 pub enum Moment {
     None,
-    Attacking {
+    AttackAct {
+        action_tag: FixedString,
+        user_tag: FixedString,
+        target_tag: FixedString,
+    },
+    AttackReact {
         action_tag: FixedString,
         user_tag: FixedString,
         target_tag: FixedString,

@@ -39,7 +39,7 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message, args: &[&str]) -> Resu
     blueprints.extend(generate_forecast_responses(&user, &target));
     blueprints.push(ResponseBlueprint::default().content(f!("{}, é a vez de sua reação.", target.name)));
 
-    battle.current_moment = Moment::Attacking {
+    battle.current_moment = Moment::AttackAct {
         action_tag: FixedString::from_static_trunc(TAG),
         user_tag: user.tag.clone(),
         target_tag: FixedString::from_str_trunc(&target_tag)

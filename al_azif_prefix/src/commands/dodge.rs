@@ -12,7 +12,7 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message) -> Result<Vec<Response
     };
     let mut battle = battle_m.write().await;
 
-    let Moment::Attacking { action_tag, user_tag: attacker_tag, target_tag: user_tag } = &battle.current_moment else {
+    let Moment::AttackAct { action_tag, user_tag: attacker_tag, target_tag: user_tag } = &battle.current_moment else {
         return simple_send_response("Você não pode usar esta habilidade agora.", false);
     };
     let user_m = Mirror::<Id>::get(bot, &user_tag).await?;
@@ -82,7 +82,7 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
 
     let mut models = Vec::new();
 
-    let Moment::Attacking { action_tag, user_tag: attacker_tag, target_tag: user_tag } = &battle.current_moment else {
+    let Moment::AttackReact { action_tag, user_tag: attacker_tag, target_tag: user_tag } = &battle.current_moment else {
         return Ok(Vec::new());
     };
     let user_m = Mirror::<Id>::get(bot, &user_tag).await?;
