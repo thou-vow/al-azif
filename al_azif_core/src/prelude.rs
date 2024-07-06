@@ -12,6 +12,7 @@ pub use crate::{
 };
 pub use al_azif_utils::{mark_thousands, math};
 pub use anyhow::{anyhow, Result};
+pub use const_format::formatcp as fc;
 pub use derive_more::Display;
 pub use rand::Rng;
 pub use serde::{Deserialize, Serialize};

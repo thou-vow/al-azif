@@ -65,10 +65,10 @@ fn generate_forecast_responses(user: &Id, target: &Id) -> Vec<ResponseBlueprint>
     let evaluated_damage = target.evaluate_damage_to_receive(user.might);
 
     let content = match evaluated_damage * 100 / (target.constitution * 10) {
-        0..=5 => "🔎 | Parece que irá causar um dano leve.",
-        6..=10 => "🔎 | Parece que irá causar um dano moderado.",
-        11..=20 => "🔎 | Parece que irá causar um dano grave.",
-        _ => "🔎 | Parece que irá causar um dano **severo**.",
+        0..=5 => fc!("{LIGHT_EMOJI} | Parece que irá causar um dano leve."),
+        6..=10 => fc!("{MEDIUM_EMOJI} | Parece que irá causar um dano moderado."),
+        11..=20 => fc!("{HEAVY_EMOJI} | Parece que irá causar um dano grave."),
+        _ => fc!("{SEVERE_EMOJI} | Parece que irá causar um dano *severo*."),
     };
 
     vec![ResponseBlueprint::default().content(content)]

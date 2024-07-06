@@ -6,6 +6,7 @@ edition.workspace = true
 al_azif_core.workspace = true
 al_azif_utils.workspace = true
 anyhow.workspace = true
+const_format.workspace = true
 serenity.workspace = true
 small-fixed-array.workspace = true
 tokio.workspace = true
