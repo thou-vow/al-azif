@@ -20,6 +20,10 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message, args: &[&str]) -> Resu
         return response::simple_send("O argumento 'alvo' é obrigatório.");
     };
 
+    if !battle.opponents.contains_key(&FixedString::from_str_trunc(target_tag)) {
+        return response::simple_send("O alvo não está na batalha.");
+    }
+
     let Ok(target_m) = Mirror::<Id>::get(bot, target_tag).await else {
         return response::simple_send("O alvo não existe.");
     };
