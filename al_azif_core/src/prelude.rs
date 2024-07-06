@@ -7,7 +7,8 @@ pub use crate::{
     id::{Age, Gender, Id},
     mirror::{InMemoryStore, Mirror, ReadMirror, WriteMirror},
     player::Player,
-    response::{simple_send_response, ResponseModel, ResponseBlueprint},
+    response,
+    response::{ResponseModel, ResponseBlueprint},
 };
 pub use al_azif_utils::{mark_thousands, math};
 pub use anyhow::{anyhow, Result};

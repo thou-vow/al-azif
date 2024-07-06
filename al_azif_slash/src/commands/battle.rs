@@ -45,19 +45,19 @@ mod end {
     pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Vec<ResponseModel>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return simple_send_response("Não há uma batalha neste canal.", false);
+            return response::simple_send("Não há uma batalha neste canal.");
         };
 
         let battle = battle_m.read().await;
         for id_tag in battle.opponents.keys() {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
             let mut id = id_m.write().await;
-            id.current_battle = None;
+            id.current_battle_tag = None;
         }
 
         Mirror::<Battle>::cut(bot, &battle_tag).await?;
 
-        simple_send_response("Batalha finalizada.", false)
+        response::simple_send("Batalha finalizada.")
     }
 }
 
@@ -67,7 +67,7 @@ mod join {
     pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return simple_send_response("Não há uma batalha neste canal.", false);
+            return response::simple_send("Não há uma batalha neste canal.");
         };
 
         let ResolvedValue::String(id_tags) = args[0].value else {
@@ -84,7 +84,7 @@ mod join {
                 invalid_id_tags.push(id_tag);
                 continue;
             };
-            if id_m.read().await.current_battle.is_some() {
+            if id_m.read().await.current_battle_tag.is_some() {
                 already_in_battle_id_tags.push(id_tag);
                 continue;
             }
@@ -92,29 +92,51 @@ mod join {
         }
 
         if !invalid_id_tags.is_empty() {
-            blueprints.push(ResponseBlueprint::default().content(f!(
-                "Id não encontrado: {}",
-                invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ")
-            )));
+            let content = if invalid_id_tags.len() > 1 {
+                let concat_tags = 
+                    invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ");
+                f!("Os Ids {concat_tags } não foram encontrados.")
+            } else {
+                f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
+            };
+
+            blueprints.push(ResponseBlueprint::default().content(content));
         }
+
         if !already_in_battle_id_tags.is_empty() {
-            blueprints.push(ResponseBlueprint::default().content(f!(
-                "Id já está em uma batalha: {}",
-                already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ")
-            )));
+            let content = if already_in_battle_id_tags.len() > 1 {
+                let concat_tags =
+                already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ");
+                f!("Os Ids {concat_tags } já estão em batalha.")
+            } else {
+                f!("O Id `{}` já está em batalha.", already_in_battle_id_tags.first().unwrap())
+            };
+
+            blueprints.push(ResponseBlueprint::default().content(content));
         }
 
         if id_ms.is_empty() {
-            blueprints.push(ResponseBlueprint::default().content("Nenhum Id entrou na batalha."));
+            blueprints.push(ResponseBlueprint::default().content("Nenhum Id entrou em batalha."));
             return Ok(vec![ResponseModel::send(blueprints)]);
         }
 
+        let mut joined_id_names = Vec::new();
         let mut battle = battle_m.write().await;
         for id_m in id_ms {
-            id_m.write().await.join_battle(&mut battle).await;
+            let mut id = id_m.write().await;
+            id.join_battle(&mut battle).await;
+            joined_id_names.push(id.name.clone());
         }
 
-        blueprints.push(battle.generate_turn_screen(bot).await?);
+        let content = if joined_id_names.len() > 1 {
+            let concat_names =
+                joined_id_names.iter().map(|name| f!("**{name}**")).collect::<Vec<String>>().join(", ");
+            f!("⚔️ | {concat_names} entraram na batalha.")
+        } else {
+            f!("⚔️ | **{}** entrou na batalha.", joined_id_names.first().unwrap())
+        };
+
+        blueprints.push(ResponseBlueprint::default().content(content));
 
         Ok(vec![ResponseModel::send(blueprints)])
     }
@@ -124,9 +146,9 @@ mod start {
     use super::*;
 
     pub async fn run_command(bot: &impl AsBot, slash: &CommandInteraction, args: &[ResolvedOption<'_>]) -> Result<Vec<ResponseModel>> {
-        let battle_tag = slash.channel_id.to_string().into_boxed_str();
+        let battle_tag = slash.channel_id.to_string();
         if Mirror::<Battle>::get(bot, &battle_tag).await.is_ok() {
-            return simple_send_response("Já está ocorrendo uma batalha neste canal.", false);
+            return response::simple_send("Já está ocorrendo uma batalha neste canal.");
         }
 
         let ResolvedValue::String(id_tags) = args[0].value else {
@@ -143,7 +165,7 @@ mod start {
                 invalid_id_tags.push(id_tag);
                 continue;
             };
-            if id_m.read().await.current_battle.is_some() {
+            if id_m.read().await.current_battle_tag.is_some() {
                 already_in_battle_id_tags.push(id_tag);
                 continue;
             }
@@ -151,20 +173,31 @@ mod start {
         }
 
         if !invalid_id_tags.is_empty() {
-            blueprints.push(ResponseBlueprint::default().content(f!(
-                "Id não encontrado: {}",
-                invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ")
-            )));
+            let content = if invalid_id_tags.len() > 1 {
+                let concat_tags = 
+                    invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ");
+                f!("Os Ids {concat_tags } não foram encontrados.")
+            } else {
+                f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
+            };
+
+            blueprints.push(ResponseBlueprint::default().content(content));
         }
+
         if !already_in_battle_id_tags.is_empty() {
-            blueprints.push(ResponseBlueprint::default().content(f!(
-                "Id já está em uma batalha: {}",
-                already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ")
-            )));
+            let content = if already_in_battle_id_tags.len() > 1 {
+                let concat_tags =
+                already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ");
+                f!("Os Ids {concat_tags } já estão em batalha.")
+            } else {
+                f!("O Id `{}` já está em batalha.", already_in_battle_id_tags.first().unwrap())
+            };
+
+            blueprints.push(ResponseBlueprint::default().content(content));
         }
 
         if id_ms.len() < 2 {
-            blueprints.push(ResponseBlueprint::default().content("Você precisa de pelo menos 2 Ids para iniciar uma batalha."));
+            blueprints.push(ResponseBlueprint::default().content("Precisa de pelo menos 2 Ids para iniciar uma batalha."));
             return Ok(vec![ResponseModel::send(blueprints)]);
         }
 
@@ -173,7 +206,6 @@ mod start {
             id_m.write().await.join_battle(&mut battle).await;
         }
 
-        
         blueprints.extend(advance(bot, &mut battle).await?);
         blueprints.push(battle.generate_turn_screen(bot).await?);
         Mirror::<Battle>::set_and_get(bot, battle).await?;

@@ -4,6 +4,7 @@ pub const PREFIX: &str = "!";
 
 pub const CACHE_FLUSH_ROUTINE: Duration = Duration::from_secs(800);
 pub const CACHE_EXPIRE_TIME: Duration = Duration::from_secs(1200);
+pub const RESPONSE_INTERVAL: Duration = Duration::from_millis(500);
 
 pub const ATTRIBUTES_LONG: &str = "Atributos";
 pub const GO_BACK_EMOJI: &str = "🔙";

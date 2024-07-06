@@ -1,5 +1,3 @@
-use math::roll::execute_roll_expression;
-
 use crate::prelude::*;
 
 pub const TAG: &str = "dodge";
@@ -8,12 +6,12 @@ pub const EVASION_BONUS: i64 = 0;
 
 pub async fn run_command(bot: &impl AsBot, msg: &Message) -> Result<Vec<ResponseModel>> {
     let Ok(battle_m) = Mirror::<Battle>::get(bot, &msg.channel_id.to_string()).await else {
-        return simple_send_response("Nenhuma batalha ocorrendo neste canal.", false);
+        return response::simple_send("Nenhuma batalha ocorrendo neste canal.");
     };
     let mut battle = battle_m.write().await;
 
     let Moment::AttackAct { action_tag, user_tag: attacker_tag, target_tag: user_tag } = &battle.current_moment else {
-        return simple_send_response("Você não pode usar esta habilidade agora.", false);
+        return response::simple_send("Você não pode usar esta habilidade agora.");
     };
     let user_m = Mirror::<Id>::get(bot, &user_tag).await?;
     let attacker_m = Mirror::<Id>::get(bot, &attacker_tag).await?;
@@ -28,9 +26,10 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message) -> Result<Vec<Response
 
     let embed = CreateEmbed::new()
         .title("Desvio")
-        .field(f!("{}: d{} | 🎆 {EVASION_BONUS}", user.name, user.dexterity), "Aguardando interação...", true)
-        .field(f!("{}: d{} | 🎆 {}", attacker.name, attacker.dexterity, get_accuracy_bonus_of_attack(action_tag)),
-            "Aguardando interação...", true
+        .field("Aguardando interação...", f!("**{}**: d*{}* 🎉 **{EVASION_BONUS}**", user.name, user.dexterity), true)
+        .field("Aguardando interação...", 
+            f!("**{}**: d*{}* 🎉 **{}**", attacker.name, attacker.dexterity, get_accuracy_bonus_of_attack(action_tag)),
+            true
         );
 
     battle.current_moment = Moment::AttackReact { 
@@ -42,8 +41,8 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message) -> Result<Vec<Response
     let battle = battle.downgrade()?;
 
     let button_row = CreateActionRow::Buttons(vec![
-        CreateButton::new(f!("prefix dodge {} user", battle.action_counter)).emoji(ReactionType::Unicode("🔮".parse()?)), 
-        CreateButton::new(f!("prefix dodge {} attacker", battle.action_counter)).emoji(ReactionType::Unicode("🔮".parse()?)).style(ButtonStyle::Danger),
+        CreateButton::new(f!("prefix dodge {} user", battle.action_counter)).emoji(ReactionType::Unicode("🎲".parse()?)), 
+        CreateButton::new(f!("prefix dodge {} attacker", battle.action_counter)).emoji(ReactionType::Unicode("🎲".parse()?)).style(ButtonStyle::Danger),
     ]);
 
     blueprints.push(ResponseBlueprint::default().embeds(vec![embed]).components(vec![button_row]));
@@ -98,13 +97,13 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
             let user = user_m.read().await;
 
             let (outcome, summary)
-                = execute_roll_expression(1, user.dexterity, EVASION_BONUS);
+                = math::roll::execute_roll_expression(1, user.dexterity, EVASION_BONUS);
 
             buttons[0] = buttons[0].clone().label(outcome.to_string()).disabled(true);
 
             embed = embed
-                .field(original_embed.fields[0].name.clone(),
-                    f!("{summary}\n⤷ {outcome}"),
+                .field(f!("{outcome}"),
+                    f!("{}\n\n{summary}", original_embed.fields[0].value),
                     true
                 )
                 .field(original_embed.fields[1].name.clone(), 
@@ -126,7 +125,7 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
             let attacker = attacker_m.read().await;
 
             let (outcome, summary)
-                = execute_roll_expression(1, attacker.dexterity, get_accuracy_bonus_of_attack(action_tag));
+                = math::roll::execute_roll_expression(1, attacker.dexterity, get_accuracy_bonus_of_attack(action_tag));
 
             buttons[1] = buttons[1].clone().label(outcome.to_string()).disabled(true);
 
@@ -135,8 +134,8 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
                     original_embed.fields[0].value.clone(),
                     true
                 )
-                .field(original_embed.fields[1].name.clone(),
-                    f!("{summary}\n⤷ {outcome}"),
+                .field(f!("{outcome}"),
+                    f!("{}\n{summary}", original_embed.fields[1].value),
                     true
                 );
 
@@ -157,11 +156,11 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
 
     if user_value >= attacker_value {
         let user = user_m.read().await;
-        blueprints.push(ResponseBlueprint::default().content(f!("{} conseguiu desviar.", user.name)));
+        blueprints.push(ResponseBlueprint::default().content(f!("✅ | **{}** conseguiu desviar.", user.name)));
     } else {
         let attacker = attacker_m.read().await;
         let mut user = user_m.write().await;
-        blueprints.push(ResponseBlueprint::default().content(f!("{} não conseguiu desviar.", user.name)));
+        blueprints.push(ResponseBlueprint::default().content(f!("❌ | **{}** não conseguiu desviar.", user.name)));
         blueprints.extend(execute_action(action_tag, &attacker, &mut user)?);
     }
 
@@ -176,7 +175,7 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
 
 fn generate_preliminary_responses(user: &Id) -> Vec<ResponseBlueprint> {
     vec![ResponseBlueprint::default().content(f!(
-        "{} decide desviar.",
+        "🔄 | **{}** decide desviar.",
         user.name,
     ))]
 }

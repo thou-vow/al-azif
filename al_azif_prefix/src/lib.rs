@@ -73,10 +73,14 @@ pub async fn run_component(bot: &impl AsBot, ctx: &Context, comp: &ComponentInte
                     CreateInteractionResponseMessage::from(first_blueprint.clone())
                 )).await?;
 
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
+
                 for blueprint in blueprints.iter().skip(1) {
                     comp.channel_id.send_message(&ctx.http,
                         CreateMessage::from(blueprint.clone())
                     ).await?;
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             ResponseModel::SendEphemeral { blueprint  } => {
@@ -90,12 +94,16 @@ pub async fn run_component(bot: &impl AsBot, ctx: &Context, comp: &ComponentInte
                     comp.channel_id.send_message(&ctx.http,
                         CreateMessage::from(blueprint.clone())
                     ).await?;
+                    
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             ResponseModel::Update { blueprint } => {
                 comp.create_response(&ctx.http, CreateInteractionResponse::UpdateMessage(
                     CreateInteractionResponseMessage::from(blueprint.clone())
                 )).await?;
+
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
             },
         }
     }

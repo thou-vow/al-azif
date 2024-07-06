@@ -39,7 +39,7 @@ mod distribute {
             unreachable!("The 'id' argument of the 'id distribute' command must be a string!");
         };
         let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
-            return simple_send_response("Informe um ID válido.", false);
+            return response::simple_send("Informe um Id válido.");
         };
     
         let id = id_m.read().await;
@@ -137,10 +137,12 @@ mod distribute {
             .label("+4");
         let button_10 = CreateButton::new(f!("{custom_button_id_prefix}10"))
             .label("+10");
+        let button_100000 = CreateButton::new(f!("{custom_button_id_prefix}100000"))
+            .label("+100000");
         let button_go_back = CreateButton::new(f!("slash id distribute {id_tag} goto_attributes"))
             .emoji(ReactionType::Unicode(GO_BACK_EMOJI.parse()?));
 
-        let row_1 = CreateActionRow::Buttons(vec![button_1, button_4, button_10, button_go_back]);
+        let row_1 = CreateActionRow::Buttons(vec![button_1, button_4, button_10, button_100000, button_go_back]);
         
         Ok(vec![row_1])
     }

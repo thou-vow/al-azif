@@ -24,10 +24,10 @@ impl Battle {
             action_value_cap: 0,
         }
     }
-    pub async fn generate_turn_screen(&self, bot: &impl AsBot) -> Result<ResponseBlueprint> {
+    pub async fn generate_turn_screen(&mut self, bot: &impl AsBot) -> Result<ResponseBlueprint> {
         let mut desc = String::new();
 
-        for (id_tag, opponent) in &self.opponents {
+        for (id_tag, opponent) in &mut self.opponents {
             let number_of_filled_squares = (opponent.action_value * 10 / self.action_value_cap).clamp(0, 10) as usize;
             let filled_portion = "⬜".repeat(number_of_filled_squares);
             let empty_portion = "⬛".repeat(10 - number_of_filled_squares);
@@ -35,15 +35,29 @@ impl Battle {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
             let id = id_m.read().await;
             
-            desc += &f!("**{}** [``{id_tag}``]\n{filled_portion}{empty_portion} {} / {}\n\n",
+            desc += &f!("**{}** [``{id_tag}``]\n{filled_portion}{empty_portion}  **{}** / **{}**",
                 id.name,
                 mark_thousands(opponent.action_value),
                 mark_thousands(self.action_value_cap)
             );
+
+            match opponent.last_total_increased_action_value_amount.signum() {
+                1 => {
+                    desc += &f!(" *+{}*", opponent.last_total_increased_action_value_amount);
+                    opponent.last_total_increased_action_value_amount = 0;
+                },
+                -1 => {
+                    desc += &f!(" *{}*", opponent.last_total_increased_action_value_amount);
+                    opponent.last_total_increased_action_value_amount = 0;
+                },
+                _ => ()
+            }
+
+            desc += "\n\n";
         }
 
         let embed = CreateEmbed::default()
-            .title(f!("Fase: {}", self.phase_counter))
+            .title(f!("Fase {}", self.phase_counter))
             .description(desc);
 
         Ok(ResponseBlueprint::default().embeds(vec![embed]))
@@ -75,6 +89,17 @@ impl Reflective for Battle {
 pub struct Opponent {
     pub tag: FixedString,
     pub action_value: i64,
+    pub last_total_increased_action_value_amount: i64,
+}
+impl Opponent {
+    pub fn add_action_value(&mut self, add: i64) {
+        self.action_value += add;
+        self.last_total_increased_action_value_amount += add;
+    }
+    pub fn sub_action_value(&mut self, sub: i64) {
+        self.action_value -= sub;
+        self.last_total_increased_action_value_amount -= sub;
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -108,6 +133,14 @@ pub async fn advance(bot: &impl AsBot, battle: &mut Battle) -> Result<Vec<Respon
     }
     
     loop {
+        let mut mov_values = Vec::new();
+        for (id_tag, _) in &battle.opponents {
+            let id_m = Mirror::<Id>::get(bot, id_tag).await?;
+            let id = id_m.read().await;
+            mov_values.push(id.movement);
+        }
+        battle.action_value_cap = *mov_values.iter().max_by(|x, y| x.cmp(y)).unwrap();
+
         if let Some(next_turn_owner_tag) = battle.get_next_turn_owner().map(FixedString::from_str_trunc) {
             blueprints.extend(
                 Mirror::<Id>::get(bot, &next_turn_owner_tag).await?
@@ -132,10 +165,10 @@ pub async fn start_next_phase(bot: &impl AsBot, battle: &mut Battle) -> Result<V
     for (id_tag, opponent) in &mut battle.opponents {
         let id_m = Mirror::<Id>::get(bot, id_tag).await?;
         let id = id_m.read().await;
-        opponent.action_value += id.movement;
+        opponent.add_action_value(id.movement);
     }
 
-    blueprints.push(ResponseBlueprint::default().content("Iniciando a próxima fase..."));
+    blueprints.push(ResponseBlueprint::default().content("⏭️ | Iniciando a próxima fase..."));
 
     Ok(blueprints)
 }

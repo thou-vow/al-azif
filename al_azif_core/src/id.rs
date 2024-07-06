@@ -19,7 +19,7 @@ pub struct Id {
     pub cognition: i64,
     pub charisma: i64,
     pub color: Option<u32>,
-    pub current_battle: Option<FixedString>,
+    pub current_battle_tag: Option<FixedString>,
 }
 impl Id {
     pub fn new(tag: &str) -> Self {
@@ -41,7 +41,7 @@ impl Id {
             cognition: 5,
             charisma: 5,
             color: None,
-            current_battle: None,
+            current_battle_tag: None,
         }
     }
 }
@@ -50,21 +50,18 @@ impl Id {
         let opponent = Opponent {
             tag: self.tag.clone(),
             action_value: self.movement,
+            last_total_increased_action_value_amount: self.movement
         };
 
         battle.opponents.insert(self.tag.clone(), opponent);
-
-        if battle.action_value_cap < self.movement {
-            battle.action_value_cap = self.movement;
-        }
         
-        self.current_battle = Some(battle.tag.clone());
+        self.current_battle_tag = Some(battle.tag.clone());
     }
     pub async fn start_turn(&mut self, _battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
         let mut blueprints = Vec::new();
 
         blueprints.push(ResponseBlueprint {
-            content: Some(f!("Agora é a vez de {}.", self.name).into()),
+            content: Some(f!("🕒 | Agora é a vez de **{}**.", self.name).into()),
             ..Default::default()
         });
 
@@ -73,17 +70,17 @@ impl Id {
     pub async fn end_turn(&mut self, battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
         let mut blueprints = Vec::new();
 
-        battle.opponents.get_mut(&self.tag).unwrap().action_value -= battle.action_value_cap;
+        battle.opponents.get_mut(&self.tag).unwrap().sub_action_value(battle.action_value_cap);
 
         blueprints.push(ResponseBlueprint {
-            content: Some(f!("Fim do turno de {}.", self.name).into()),
+            content: Some(f!("⏭️ | Fim do turno de **{}**.", self.name).into()),
             ..Default::default()
         });
 
         Ok(blueprints)
     }
     pub fn evaluate_damage_to_receive(&self, value: i64) -> i64 {
-        self.hp - value
+        value
     }
     pub fn receive_damage(&mut self, value: i64) {
         self.hp = self.evaluate_damage_to_receive(value).clamp(0, self.hp);

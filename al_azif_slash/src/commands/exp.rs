@@ -39,19 +39,32 @@ mod bestow {
         let ResolvedValue::String(id_tags) = args[0].value else {
             unreachable!("The 'ids' argument of the 'exp bestow' command must be a string!");
         };
-        let (id_ms, invalid_tags) = parse_valid_entity_mirrors(
-            bot, id_tags.split_ascii_whitespace()
-        ).await;
 
-        if !invalid_tags.is_empty() {
-            blueprints.push(ResponseBlueprint::default().content(f!(
-                "Id não encontrado: {}",
-                invalid_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ")
-            )));
+        let mut id_ms = Vec::new();
+        let mut invalid_id_tags = Vec::new();
+
+        for id_tag in id_tags.split_ascii_whitespace() {
+            let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
+                invalid_id_tags.push(id_tag);
+                continue;
+            };
+            id_ms.push(id_m);
+        }
+
+        if !invalid_id_tags.is_empty() {
+            let content = if invalid_id_tags.len() > 1 {
+                let concat_tags = 
+                    invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>().join(", ");
+                f!("Os Ids {concat_tags } não foram encontrados.")
+            } else {
+                f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
+            };
+
+            blueprints.push(ResponseBlueprint::default().content(content));
         }
 
         if id_ms.is_empty() {
-            blueprints.push(ResponseBlueprint::default().content("Você precisa de pelo menos uma entidade para conceder experiência."));
+            blueprints.push(ResponseBlueprint::default().content("Você precisa de pelo menos um Id para conceder experiência."));
             return Ok(vec![ResponseModel::send(blueprints)]);
         }
 
@@ -73,20 +86,18 @@ mod bestow {
             }
 
             if previous_lvl != id.lvl {
-                blueprints.push(ResponseBlueprint::default().content(f!(
-                    "{} obteve {} de experiência e subiu de nível! [{} ➜ {}]
-                    Pode distribuir {} pontos nos atributos.
-                    Falta {} de experiência para o próximo nível.",
-                    id.name,
-                    mark_thousands(value),
-                    mark_thousands(previous_lvl),
-                    mark_thousands(id.lvl),
-                    mark_thousands(id.points_to_distribute),
+                let mut content = f!("**{}** obteve **{}** de experiência e subiu de nível [**{}** ➜ **{}**]",
+                    id.name, mark_thousands(value), mark_thousands(previous_lvl), mark_thousands(id.lvl)
+                );
+                content.push_str(&f!("Pode distribuir **{}** pontos nos atributos.", mark_thousands(id.points_to_distribute)));
+                content.push_str(&f!("Falta **{}** de experiência para o próximo nível.",
                     mark_thousands(xp_to_next_level(id.lvl) - id.xp)
-                )));
+                ));
+
+                blueprints.push(ResponseBlueprint::default().content(content));
             } else {
                 blueprints.push(ResponseBlueprint::default().content(f!(
-                    "{} obteve {} de experiência. Falta {} para o próximo nível.",
+                    "**{}** obteve **{}** de experiência. Falta **{}** para o próximo nível.",
                     id.name,
                     mark_thousands(value),
                     mark_thousands(xp_to_next_level(id.lvl) - id.xp))
@@ -95,20 +106,5 @@ mod bestow {
         }
 
        Ok(vec![ResponseModel::send(blueprints)])
-    }
-
-    async fn parse_valid_entity_mirrors<'a>(bot: &impl AsBot, id_tags: impl Iterator<Item = &'a str>) -> (Vec<Mirror<Id>>, Vec<&'a str>) {
-        let mut id_ms = Vec::new();
-        let mut invalid_tags = Vec::new();
-
-        for id_tag in id_tags {
-            let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
-                invalid_tags.push(id_tag);
-                continue;
-            };
-            id_ms.push(id_m);
-        }
-
-        (id_ms, invalid_tags)
     }
 }

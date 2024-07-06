@@ -81,20 +81,11 @@ impl From<ResponseBlueprint> for CreateMessage<'static> {
     }
 }
 
-pub fn simple_send_response(content: impl Into<Cow<'static, str>>, ephemeral: bool) -> Result<Vec<ResponseModel>> {
-    if ephemeral {
-        Ok(vec![ResponseModel::SendEphemeral { 
-            blueprint: ResponseBlueprint {
-                content: Some(content.into()),
-               ..Default::default()
-            }
-        }])
-    } else {
-        Ok(vec![ResponseModel::Send {
-            blueprints: vec![ResponseBlueprint {
-                content: Some(content.into()),
-               ..Default::default()
-            }]
-        }])
-    }
+pub fn simple_send(content: impl Into<Cow<'static, str>>) -> Result<Vec<ResponseModel>> {
+    Ok(vec![ResponseModel::Send {
+        blueprints: vec![ResponseBlueprint {
+            content: Some(content.into()),
+            ..Default::default()
+        }]
+    }])
 }
