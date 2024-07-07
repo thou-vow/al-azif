@@ -4,31 +4,29 @@ use crate::prelude::*;
 pub struct Battle {
     pub tag: FixedString,
     pub opponents: HashMap<FixedString, Opponent>,
-    pub action_counter: i64,
     pub turn_counter: i64,
     pub phase_counter: i64,
     pub current_turn_owner_tag: FixedString,
     pub current_moment: Moment,
-    pub action_value_cap: i64,
+    pub turn_value_cap: i64,
 }
 impl Battle {
     pub fn new(tag: &str) -> Self {
         Self {
             tag: FixedString::from_str_trunc(tag),
             opponents: HashMap::new(),
-            action_counter: 0,
             turn_counter: 0,
             phase_counter: 0,
             current_turn_owner_tag: FixedString::from_static_trunc(""),
             current_moment: Moment::None,
-            action_value_cap: 0,
+            turn_value_cap: 0,
         }
     }
     pub async fn generate_turn_screen(&mut self, bot: &impl AsBot) -> Result<ResponseBlueprint> {
         let mut desc = String::new();
 
         for (id_tag, opponent) in &mut self.opponents {
-            let number_of_filled_squares = (opponent.action_value * 10 / self.action_value_cap).clamp(0, 10) as usize;
+            let number_of_filled_squares = (opponent.turn_value * 10 / self.turn_value_cap).clamp(0, 10) as usize;
             let filled_portion = "⬜".repeat(number_of_filled_squares);
             let empty_portion = "⬛".repeat(10 - number_of_filled_squares);
 
@@ -37,18 +35,18 @@ impl Battle {
             
             desc += &f!("**{}** [``{id_tag}``]\n{filled_portion}{empty_portion}  **{}** / **{}**",
                 id.name,
-                mark_thousands(opponent.action_value),
-                mark_thousands(self.action_value_cap)
+                mark_thousands(opponent.turn_value),
+                mark_thousands(self.turn_value_cap)
             );
 
-            match opponent.last_total_increased_action_value_amount.signum() {
+            match opponent.last_total_increased_turn_value_amount.signum() {
                 1 => {
-                    desc += &f!(" *+{}*", opponent.last_total_increased_action_value_amount);
-                    opponent.last_total_increased_action_value_amount = 0;
+                    desc += &f!(" *+{}*", opponent.last_total_increased_turn_value_amount);
+                    opponent.last_total_increased_turn_value_amount = 0;
                 },
                 -1 => {
-                    desc += &f!(" *{}*", opponent.last_total_increased_action_value_amount);
-                    opponent.last_total_increased_action_value_amount = 0;
+                    desc += &f!(" *{}*", opponent.last_total_increased_turn_value_amount);
+                    opponent.last_total_increased_turn_value_amount = 0;
                 },
                 _ => ()
             }
@@ -65,7 +63,7 @@ impl Battle {
     fn get_next_turn_owner(&self) -> Option<&str> {
         self.opponents.iter()
             .max_by(|(_, opponent1), (_, opponent2)| {
-                let order = opponent1.action_value.cmp(&opponent2.action_value);
+                let order = opponent1.turn_value.cmp(&opponent2.turn_value);
                 if order == Ordering::Equal {
                     if rand::thread_rng().gen_bool(0.5) {
                         return Ordering::Less;
@@ -74,7 +72,7 @@ impl Battle {
                 }
                 order
             })
-            .filter(|(_, opponent)| opponent.action_value >= self.action_value_cap)
+            .filter(|(_, opponent)| opponent.turn_value >= self.turn_value_cap)
             .map(|(id_tag, _)| id_tag.as_ref())
     }
 }
@@ -88,32 +86,34 @@ impl Reflective for Battle {
 #[derive(Deserialize, Serialize)]
 pub struct Opponent {
     pub tag: FixedString,
-    pub action_value: i64,
-    pub last_total_increased_action_value_amount: i64,
+    pub turn_value: i64,
+    pub last_total_increased_turn_value_amount: i64,
 }
 impl Opponent {
-    pub fn add_action_value(&mut self, add: i64) {
-        self.action_value += add;
-        self.last_total_increased_action_value_amount += add;
+    pub fn add_turn_value(&mut self, add: i64) {
+        self.turn_value += add;
+        self.last_total_increased_turn_value_amount += add;
     }
-    pub fn sub_action_value(&mut self, sub: i64) {
-        self.action_value -= sub;
-        self.last_total_increased_action_value_amount -= sub;
+    pub fn sub_turn_value(&mut self, sub: i64) {
+        self.turn_value -= sub;
+        self.last_total_increased_turn_value_amount -= sub;
     }
 }
 
 #[derive(Deserialize, Serialize)]
 pub enum Moment {
     None,
-    AttackAct {
+    AttackPrimary {
         action_tag: FixedString,
         user_tag: FixedString,
         target_tag: FixedString,
+        security_key: i64
     },
-    AttackReact {
+    AttackReactive {
         action_tag: FixedString,
         user_tag: FixedString,
         target_tag: FixedString,
+        security_key: i64
     },
     Defending,
 }
@@ -139,7 +139,7 @@ pub async fn advance(bot: &impl AsBot, battle: &mut Battle) -> Result<Vec<Respon
             let id = id_m.read().await;
             mov_values.push(id.movement);
         }
-        battle.action_value_cap = *mov_values.iter().max_by(|x, y| x.cmp(y)).unwrap();
+        battle.turn_value_cap = *mov_values.iter().max_by(|x, y| x.cmp(y)).unwrap();
 
         if let Some(next_turn_owner_tag) = battle.get_next_turn_owner().map(FixedString::from_str_trunc) {
             blueprints.extend(
@@ -165,10 +165,10 @@ pub async fn start_next_phase(bot: &impl AsBot, battle: &mut Battle) -> Result<V
     for (id_tag, opponent) in &mut battle.opponents {
         let id_m = Mirror::<Id>::get(bot, id_tag).await?;
         let id = id_m.read().await;
-        opponent.add_action_value(id.movement);
+        opponent.add_turn_value(id.movement);
     }
 
-    blueprints.push(ResponseBlueprint::default().content("⏭️ | Iniciando a próxima fase..."));
+    blueprints.push(ResponseBlueprint::default().content("🚩 | Iniciando a próxima fase..."));
 
     Ok(blueprints)
 }

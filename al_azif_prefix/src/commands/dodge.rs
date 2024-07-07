@@ -10,9 +10,15 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message) -> Result<Vec<Response
     };
     let mut battle = battle_m.write().await;
 
-    let Moment::AttackAct { action_tag, user_tag: attacker_tag, target_tag: user_tag } = &battle.current_moment else {
-        return response::simple_send("Você não pode usar esta habilidade agora.");
+    let Moment::AttackPrimary {
+        action_tag,
+        user_tag: attacker_tag,
+        target_tag: user_tag,
+        ..
+    } = &battle.current_moment else {
+        return response::simple_send("Você não pode usar uma Ação Reativa agora.");
     };
+
     let user_m = Mirror::<Id>::get(bot, &user_tag).await?;
     let attacker_m = Mirror::<Id>::get(bot, &attacker_tag).await?;
 
@@ -32,17 +38,18 @@ pub async fn run_command(bot: &impl AsBot, msg: &Message) -> Result<Vec<Response
             true
         );
 
-    battle.current_moment = Moment::AttackReact { 
+    let security_key = Timestamp::now().unix_timestamp();
+
+    battle.current_moment = Moment::AttackReactive { 
         action_tag: action_tag.clone(),
         user_tag: attacker_tag.clone(),
-        target_tag: user_tag.clone() 
+        target_tag: user_tag.clone(),
+        security_key
     };
-    
-    let battle = battle.downgrade()?;
 
     let button_row = CreateActionRow::Buttons(vec![
-        CreateButton::new(f!("prefix dodge {} user", battle.action_counter)).emoji(ReactionType::Unicode("🎲".parse()?)), 
-        CreateButton::new(f!("prefix dodge {} attacker", battle.action_counter)).emoji(ReactionType::Unicode("🎲".parse()?)).style(ButtonStyle::Danger),
+        CreateButton::new(f!("prefix dodge {} user", security_key)).emoji(ReactionType::Unicode("🎲".parse()?)), 
+        CreateButton::new(f!("prefix dodge {} attacker", security_key)).emoji(ReactionType::Unicode("🎲".parse()?)).style(ButtonStyle::Danger),
     ]);
 
     blueprints.push(ResponseBlueprint::default().embeds(vec![embed]).components(vec![button_row]));
@@ -54,7 +61,16 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
     let battle_m = Mirror::<Battle>::get(bot, &comp.channel_id.to_string()).await?;
     let mut battle = battle_m.write().await;
 
-    if battle.action_counter != args[0].parse::<i64>()? {
+    let Moment::AttackReactive { 
+        action_tag,
+        user_tag: attacker_tag,
+        target_tag: user_tag,
+        security_key
+    } = &battle.current_moment else {
+        return Ok(Vec::new());
+    };
+
+    if *security_key != args[0].parse::<i64>()? {
         return Ok(Vec::new());
     }
 
@@ -86,9 +102,6 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
 
     let mut models = Vec::new();
 
-    let Moment::AttackReact { action_tag, user_tag: attacker_tag, target_tag: user_tag } = &battle.current_moment else {
-        return Ok(Vec::new());
-    };
     let user_m = Mirror::<Id>::get(bot, &user_tag).await?;
     let attacker_m = Mirror::<Id>::get(bot, &attacker_tag).await?;
 
@@ -103,7 +116,7 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
 
             embed = embed
                 .field(f!("{outcome}"),
-                    f!("{}\n\n{summary}", original_embed.fields[0].value),
+                    f!("{}\n{summary}", original_embed.fields[0].value),
                     true
                 )
                 .field(original_embed.fields[1].name.clone(), 

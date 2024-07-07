@@ -49,8 +49,8 @@ impl Id {
     pub async fn join_battle(&mut self, battle: &mut Battle) {
         let opponent = Opponent {
             tag: self.tag.clone(),
-            action_value: self.movement,
-            last_total_increased_action_value_amount: self.movement
+            turn_value: self.movement,
+            last_total_increased_turn_value_amount: self.movement
         };
 
         battle.opponents.insert(self.tag.clone(), opponent);
@@ -70,10 +70,10 @@ impl Id {
     pub async fn end_turn(&mut self, battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
         let mut blueprints = Vec::new();
 
-        battle.opponents.get_mut(&self.tag).unwrap().sub_action_value(battle.action_value_cap);
+        battle.opponents.get_mut(&self.tag).unwrap().sub_turn_value(battle.turn_value_cap);
 
         blueprints.push(ResponseBlueprint {
-            content: Some(f!("⏭️ | Fim do turno de **{}**.", self.name).into()),
+            content: Some(f!("🏁 | Fim do turno de **{}**.", self.name).into()),
             ..Default::default()
         });
 
@@ -83,7 +83,7 @@ impl Id {
         value
     }
     pub fn receive_damage(&mut self, value: i64) {
-        self.hp = self.evaluate_damage_to_receive(value).clamp(0, self.hp);
+        self.hp = (self.hp - self.evaluate_damage_to_receive(value)).clamp(0, self.hp)
     }
 }
 impl Reflective for Id {
