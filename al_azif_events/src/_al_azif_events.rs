@@ -1,8 +1,8 @@
 pub mod action;
 pub mod component;
-pub mod slash;
 pub mod prefix;
 pub mod prelude;
+pub mod slash;
 
 use crate::prelude::*;
 
@@ -30,7 +30,7 @@ pub async fn try_message(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Resu
 
 pub async fn try_ready(bot: &impl AsBot, ctx: &Context, _ready: &Ready) -> Result<()> {
     slash::register_commands(bot, ctx).await?;
-    
+
     ctx.idle();
 
     bot.spawn_flush_routine();

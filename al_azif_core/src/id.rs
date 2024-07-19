@@ -22,7 +22,10 @@ pub struct Id {
     pub current_battle_tag: Option<FixedString>,
 }
 impl Id {
-    pub fn new(tag: &str) -> Self {
+    pub fn new(tag: impl AsRef<str>) -> Self {
+        Id::_new(tag.as_ref())
+    }
+    fn _new(tag: &str) -> Self {
         Self {
             tag: FixedString::from_str_trunc(tag),
             name: FixedString::from_static_trunc("Unknown"),
@@ -50,14 +53,17 @@ impl Id {
         let opponent = Opponent {
             tag: self.tag.clone(),
             turn_value: self.movement,
-            last_total_increased_turn_value_amount: self.movement
+            last_total_increased_turn_value_amount: self.movement,
         };
 
         battle.opponents.insert(self.tag.clone(), opponent);
-        
+
         self.current_battle_tag = Some(battle.tag.clone());
     }
-    pub async fn start_turn(&mut self, _battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
+    pub async fn start_turn<'a>(
+        &mut self,
+        _battle: &mut Battle,
+    ) -> Result<Vec<ResponseBlueprint<'a>>> {
         let mut blueprints = Vec::new();
 
         blueprints.push(ResponseBlueprint {
@@ -67,10 +73,17 @@ impl Id {
 
         Ok(blueprints)
     }
-    pub async fn end_turn(&mut self, battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
+    pub async fn end_turn<'a>(
+        &mut self,
+        battle: &mut Battle,
+    ) -> Result<Vec<ResponseBlueprint<'a>>> {
         let mut blueprints = Vec::new();
 
-        battle.opponents.get_mut(&self.tag).unwrap().sub_turn_value(battle.turn_value_cap);
+        battle
+            .opponents
+            .get_mut(&self.tag)
+            .unwrap()
+            .sub_turn_value(battle.turn_value_cap);
 
         blueprints.push(ResponseBlueprint {
             content: Some(f!("🏁 | Fim do turno de **{}**.", self.name).into()),

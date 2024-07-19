@@ -6,21 +6,31 @@ pub struct Mirror<T: Reflective> {
     lock: Arc<RwLock<T>>,
 }
 impl<T: Reflective> Mirror<T> {
-    pub async fn get(store_lock: impl AsRef<InMemoryStore<T>>, tag: &str) -> Result<Self> {
-        let store_lock = store_lock.as_ref();
+    pub async fn get(
+        store_lock: impl AsRef<InMemoryStore<T>>,
+        tag: impl AsRef<str>,
+    ) -> Result<Self> {
+        Mirror::<T>::_get(store_lock.as_ref(), tag.as_ref()).await
+    }
+    async fn _get(store_lock: &InMemoryStore<T>, tag: &str) -> Result<Self> {
         let mut store = store_lock.lock().await;
 
         let Some((value_lock, instant)) = store.get_mut(tag) else {
             let value_lock = Arc::new(RwLock::new(database::get::<T>(tag)?));
 
-            store.insert(FixedString::from_str_trunc(tag), (value_lock.clone(), Instant::now()));
+            store.insert(
+                FixedString::from_str_trunc(tag),
+                (value_lock.clone(), Instant::now()),
+            );
 
             return Ok(Self { lock: value_lock });
         };
 
         *instant = Instant::now();
 
-        Ok(Self { lock: value_lock.clone() })
+        Ok(Self {
+            lock: value_lock.clone(),
+        })
     }
     pub async fn set_and_get(store_lock: impl AsRef<InMemoryStore<T>>, value: T) -> Result<Self> {
         database::set(&value)?;
@@ -29,15 +39,19 @@ impl<T: Reflective> Mirror<T> {
 
         let store_lock = store_lock.as_ref();
         let mut store = store_lock.lock().await;
-        
+
         let value_lock = Arc::new(RwLock::new(value));
 
         store.insert(tag, (value_lock.clone(), Instant::now()));
 
-        Ok(Self { lock: value_lock.clone() })
+        Ok(Self {
+            lock: value_lock.clone(),
+        })
     }
-    pub async fn cut(store_lock: impl AsRef<InMemoryStore<T>>, tag: &str) -> Result<()> {
-        let store_lock = store_lock.as_ref();
+    pub async fn cut(store_lock: impl AsRef<InMemoryStore<T>>, tag: impl AsRef<str>) -> Result<()> {
+        Mirror::<T>::_cut(store_lock.as_ref(), tag.as_ref()).await
+    }
+    async fn _cut(store_lock: &InMemoryStore<T>, tag: &str) -> Result<()> {
         let mut store = store_lock.lock().await;
 
         store.remove(tag);
@@ -47,20 +61,26 @@ impl<T: Reflective> Mirror<T> {
         Ok(())
     }
     pub async fn read(&self) -> ReadMirror<'_, T> {
-        ReadMirror { guard: self.lock.read().await }
+        ReadMirror {
+            guard: self.lock.read().await,
+        }
     }
     pub async fn write(&self) -> WriteMirror<'_, T> {
-        WriteMirror { guard: Some(self.lock.write().await) }
+        WriteMirror {
+            guard: Some(self.lock.write().await),
+        }
     }
 }
 impl<T: Reflective> Clone for Mirror<T> {
     fn clone(&self) -> Self {
-        Self { lock: self.lock.clone() }
+        Self {
+            lock: self.lock.clone(),
+        }
     }
 }
 
 pub struct ReadMirror<'a, T: Reflective> {
-    guard: RwLockReadGuard<'a, T>
+    guard: RwLockReadGuard<'a, T>,
 }
 impl<'a, T: Reflective> Deref for ReadMirror<'a, T> {
     type Target = T;
@@ -71,7 +91,7 @@ impl<'a, T: Reflective> Deref for ReadMirror<'a, T> {
 }
 
 pub struct WriteMirror<'a, T: Reflective> {
-    guard: Option<RwLockWriteGuard<'a, T>>
+    guard: Option<RwLockWriteGuard<'a, T>>,
 }
 impl<'a, T: Reflective> WriteMirror<'a, T> {
     pub fn downgrade(mut self) -> Result<ReadMirror<'a, T>> {

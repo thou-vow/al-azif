@@ -9,19 +9,19 @@ pub struct Bot {
 impl EventHandler for Bot {
     async fn interaction_create(&self, ctx: Context, intr: Interaction) {
         if let Err(why) = al_azif_events::try_interaction(self, &ctx, &intr).await {
-            error!("Error in interaction create: {why}");
+            error!("Error in interaction create: {why:?}");
         }
     }
     async fn message(&self, ctx: Context, msg: Message) {
         if let Err(why) = al_azif_events::try_message(self, &ctx, &msg).await {
-            error!("Error in message: {why}");
+            error!("Error in message: {why:?}");
         }
     }
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
 
         if let Err(why) = al_azif_events::try_ready(self, &ctx, &ready).await {
-            error!("Error in ready: {why}");
+            error!("Error in ready: {why:?}");
         }
     }
 }

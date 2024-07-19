@@ -14,7 +14,7 @@ pub fn get_evasion_bonus_of_dodge(action_tag: &str) -> i64 {
     }
 }
 
-pub fn execute_action(action_tag: &str, user: &Id, target: &mut Id) -> Result<Vec<ResponseBlueprint>> {
+pub fn execute_action<'a>(action_tag: &str, user: &Id, target: &mut Id) -> Result<Blueprints<'a>> {
     match action_tag {
         "attack" => attack::execute(user, target),
         _ => unreachable!("Invalid action tag: {}", action_tag),

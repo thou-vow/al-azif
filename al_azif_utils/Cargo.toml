@@ -2,5 +2,9 @@
 name = "al_azif_utils"
 edition.workspace = true
 
+[lib]
+path = "src/_al_azif_utils.rs"
+
 [dependencies]
 rand.workspace = true
+serenity.workspace = true

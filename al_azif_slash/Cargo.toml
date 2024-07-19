@@ -2,6 +2,9 @@
 name = "al_azif_slash"
 edition.workspace = true
 
+[lib]
+path = "src/_al_azif_slash.rs"
+
 [dependencies]
 al_azif_core.workspace = true
 al_azif_utils.workspace = true

@@ -11,7 +11,10 @@ pub struct Battle {
     pub turn_value_cap: i64,
 }
 impl Battle {
-    pub fn new(tag: &str) -> Self {
+    pub fn new(tag: impl AsRef<str>) -> Self {
+        Battle::_new(tag.as_ref())
+    }
+    fn _new(tag: &str) -> Self {
         Self {
             tag: FixedString::from_str_trunc(tag),
             opponents: HashMap::new(),
@@ -22,18 +25,23 @@ impl Battle {
             turn_value_cap: 0,
         }
     }
-    pub async fn generate_turn_screen(&mut self, bot: &impl AsBot) -> Result<ResponseBlueprint> {
+    pub async fn generate_turn_screen<'a>(
+        &mut self,
+        bot: &impl AsBot,
+    ) -> Result<ResponseBlueprint<'a>> {
         let mut desc = String::new();
 
         for (id_tag, opponent) in &mut self.opponents {
-            let number_of_filled_squares = (opponent.turn_value * 10 / self.turn_value_cap).clamp(0, 10) as usize;
+            let number_of_filled_squares =
+                (opponent.turn_value * 7 / self.turn_value_cap).clamp(0, 7) as usize;
             let filled_portion = "⬜".repeat(number_of_filled_squares);
-            let empty_portion = "⬛".repeat(10 - number_of_filled_squares);
+            let empty_portion = "⬛".repeat(7 - number_of_filled_squares);
 
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
             let id = id_m.read().await;
-            
-            desc += &f!("**{}** [``{id_tag}``]\n{filled_portion}{empty_portion}  **{}** / **{}**",
+
+            desc += &f!(
+                "**{}** [``{id_tag}``]\n{filled_portion}{empty_portion}  **{}** / **{}**",
                 id.name,
                 mark_thousands(opponent.turn_value),
                 mark_thousands(self.turn_value_cap)
@@ -43,12 +51,12 @@ impl Battle {
                 1 => {
                     desc += &f!(" *+{}*", opponent.last_total_increased_turn_value_amount);
                     opponent.last_total_increased_turn_value_amount = 0;
-                },
+                }
                 -1 => {
                     desc += &f!(" *{}*", opponent.last_total_increased_turn_value_amount);
                     opponent.last_total_increased_turn_value_amount = 0;
-                },
-                _ => ()
+                }
+                _ => (),
             }
 
             desc += "\n\n";
@@ -58,10 +66,11 @@ impl Battle {
             .title(f!("Fase {}", self.phase_counter))
             .description(desc);
 
-        Ok(ResponseBlueprint::default().embeds(vec![embed]))
+        Ok(ResponseBlueprint::default().assign_embeds(vec![embed]))
     }
     fn get_next_turn_owner(&self) -> Option<&str> {
-        self.opponents.iter()
+        self.opponents
+            .iter()
             .max_by(|(_, opponent1), (_, opponent2)| {
                 let order = opponent1.turn_value.cmp(&opponent2.turn_value);
                 if order == Ordering::Equal {
@@ -105,46 +114,60 @@ pub enum Moment {
     None,
     AttackPrimary {
         action_tag: FixedString,
-        user_tag: FixedString,
+        attacker_tag: FixedString,
         target_tag: FixedString,
-        security_key: i64
+        security_key: i64,
     },
     AttackReactive {
         action_tag: FixedString,
-        user_tag: FixedString,
+        attacker_tag: FixedString,
         target_tag: FixedString,
-        security_key: i64
+        security_key: i64,
     },
     Defending,
 }
 
-pub async fn advance(bot: &impl AsBot, battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
+pub async fn advance<'a>(
+    bot: &impl AsBot,
+    battle: &mut Battle,
+) -> Result<Vec<ResponseBlueprint<'a>>> {
     let mut blueprints = Vec::new();
 
-    if let Some(current_turn_owner_tag) = battle.opponents
+    if let Some(current_turn_owner_tag) = battle
+        .opponents
         .contains_key(&battle.current_turn_owner_tag)
         .then(|| battle.current_turn_owner_tag.clone())
     {
         blueprints.extend(
-            Mirror::<Id>::get(bot, &current_turn_owner_tag).await?
-                .write().await
-                .end_turn(battle).await?
+            Mirror::<Id>::get(bot, &current_turn_owner_tag)
+                .await?
+                .write()
+                .await
+                .end_turn(battle)
+                .await?,
         );
     }
-    
+
     loop {
         let mut mov_values = Vec::new();
-        for (id_tag, _) in &battle.opponents {
+        for id_tag in battle.opponents.keys() {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
             let id = id_m.read().await;
             mov_values.push(id.movement);
         }
         battle.turn_value_cap = *mov_values.iter().max_by(|x, y| x.cmp(y)).unwrap();
 
-        if let Some(next_turn_owner_tag) = battle.get_next_turn_owner().map(FixedString::from_str_trunc) {
+        if let Some(next_turn_owner_tag) = battle
+            .get_next_turn_owner()
+            .map(FixedString::from_str_trunc)
+        {
             blueprints.extend(
-                Mirror::<Id>::get(bot, &next_turn_owner_tag).await?
-                    .write().await.start_turn(battle).await?
+                Mirror::<Id>::get(bot, &next_turn_owner_tag)
+                    .await?
+                    .write()
+                    .await
+                    .start_turn(battle)
+                    .await?,
             );
             battle.turn_counter += 1;
             battle.current_turn_owner_tag = next_turn_owner_tag;
@@ -159,7 +182,7 @@ pub async fn advance(bot: &impl AsBot, battle: &mut Battle) -> Result<Vec<Respon
     Ok(blueprints)
 }
 
-pub async fn start_next_phase(bot: &impl AsBot, battle: &mut Battle) -> Result<Vec<ResponseBlueprint>> {
+pub async fn start_next_phase<'a>(bot: &impl AsBot, battle: &mut Battle) -> Result<Blueprints<'a>> {
     let mut blueprints = Vec::new();
 
     for (id_tag, opponent) in &mut battle.opponents {
@@ -168,7 +191,8 @@ pub async fn start_next_phase(bot: &impl AsBot, battle: &mut Battle) -> Result<V
         opponent.add_turn_value(id.movement);
     }
 
-    blueprints.push(ResponseBlueprint::default().content("🚩 | Iniciando a próxima fase..."));
+    blueprints
+        .push(ResponseBlueprint::default().assign_content("🚩 | Iniciando a próxima fase..."));
 
     Ok(blueprints)
 }

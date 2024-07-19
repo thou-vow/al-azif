@@ -62,7 +62,7 @@ pub const PURE_EMOJI: &str = "☸️";
 
 pub const LIGHT_EMOJI: &str = "🟢";
 pub const MEDIUM_EMOJI: &str = "🟡";
-pub const HEAVY_EMOJI: &str =  "🔴";
+pub const HEAVY_EMOJI: &str = "🔴";
 pub const SEVERE_EMOJI: &str = "⚠️";
 
 pub const fn xp_to_next_level(lvl: i64) -> i64 {

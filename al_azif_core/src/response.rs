@@ -1,91 +1,109 @@
 use crate::prelude::*;
 
+pub type Blueprints<'a> = Vec<ResponseBlueprint<'a>>;
+pub type Models<'a> = Vec<ResponseModel<'a>>;
+
 #[derive(Debug)]
-pub enum ResponseModel {
-    Send { blueprints: Vec<ResponseBlueprint> },
+pub enum ResponseModel<'a> {
+    Send {
+        blueprints: Vec<ResponseBlueprint<'a>>,
+    },
     // Only for interactions
-    SendEphemeral { blueprint: ResponseBlueprint },
-    SendLoose { blueprints: Vec<ResponseBlueprint> },
+    SendEphemeral {
+        blueprint: ResponseBlueprint<'a>,
+    },
+    SendLoose {
+        blueprints: Vec<ResponseBlueprint<'a>>,
+    },
     // Only for component-based interactions
-    Update { blueprint: ResponseBlueprint },
+    Update {
+        blueprint: ResponseBlueprint<'a>,
+    },
 }
-impl ResponseModel {
-    pub fn send(blueprints: Vec<ResponseBlueprint>) -> Self {
+impl<'a> ResponseModel<'a> {
+    pub fn send(blueprints: Vec<ResponseBlueprint<'a>>) -> Self {
         Self::Send { blueprints }
     }
-    pub fn send_ephemeral(blueprint: ResponseBlueprint) -> Self {
+    pub fn send_ephemeral(blueprint: ResponseBlueprint<'a>) -> Self {
         Self::SendEphemeral { blueprint }
     }
-    pub fn send_loose(blueprints: Vec<ResponseBlueprint>) -> Self {
+    pub fn send_loose(blueprints: Vec<ResponseBlueprint<'a>>) -> Self {
         Self::SendLoose { blueprints }
     }
-    pub fn update(blueprint: ResponseBlueprint) -> Self {
+    pub fn update(blueprint: ResponseBlueprint<'a>) -> Self {
         Self::Update { blueprint }
     }
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct ResponseBlueprint {
-    pub content: Option<Cow<'static, str>>,
-    pub embeds: Cow<'static, [CreateEmbed<'static>]>,
-    pub attachments: Vec<CreateAttachment<'static>>,
-    pub components: Cow<'static, [CreateActionRow<'static>]>,
-    pub allowed_mentions: Option<CreateAllowedMentions<'static>>,
+pub struct ResponseBlueprint<'a> {
+    // Missing attachments and allowed_mentions
+    pub content: Option<Cow<'a, str>>,
+    pub embeds: Cow<'a, [CreateEmbed<'a>]>,
+    pub components: Cow<'a, [CreateActionRow<'a>]>,
 }
-impl ResponseBlueprint {
-    pub fn content(mut self, content: impl Into<Cow<'static, str>>) -> Self {
+impl<'a> ResponseBlueprint<'a> {
+    pub fn assign_content(mut self, content: impl Into<Cow<'a, str>>) -> Self {
         self.content = Some(content.into());
         self
     }
-    pub fn embeds(mut self, embeds: impl Into<Cow<'static, [CreateEmbed<'static>]>>) -> Self {
+    pub fn assign_embeds(mut self, embeds: impl Into<Cow<'a, [CreateEmbed<'a>]>>) -> Self {
         self.embeds = embeds.into();
         self
     }
-    pub fn components(mut self, components: impl Into<Cow<'static, [CreateActionRow<'static>]>>) -> Self {
+    pub fn assign_components(
+        mut self,
+        components: impl Into<Cow<'a, [CreateActionRow<'a>]>>,
+    ) -> Self {
         self.components = components.into();
         self
     }
 }
-impl From<ResponseBlueprint> for CreateInteractionResponseMessage<'static> {
-    fn from(value: ResponseBlueprint) -> Self {
-        let mut into = Self::default()
-            .embeds(value.embeds)
-            .add_files(value.attachments)
-            .components(value.components);
-
-        if let Some(content) = value.content {
-            into = into.content(content);
+impl<'a> ResponseBlueprint<'a> {
+    pub fn get_mut_button(&mut self, row: usize, column: usize) -> Option<&mut CreateButton<'a>> {
+        match self.components.to_mut().get_mut(row) {
+            Some(CreateActionRow::Buttons(buttons)) => buttons.get_mut(column),
+            _ => None,
         }
-        if let Some(allowed_mentions) = value.allowed_mentions {
-            into = into.allowed_mentions(allowed_mentions);
-        }
-
-        into
+    }
+    pub fn get_mut_embed(&mut self, index: usize) -> Option<&mut CreateEmbed<'a>> {
+        self.embeds.to_mut().get_mut(index)
     }
 }
-impl From<ResponseBlueprint> for CreateMessage<'static> {
-    fn from(value: ResponseBlueprint) -> Self {
+
+impl<'a> From<ResponseBlueprint<'a>> for CreateInteractionResponseMessage<'a> {
+    fn from(value: ResponseBlueprint<'a>) -> Self {
         let mut into = Self::default()
             .embeds(value.embeds)
-            .add_files(value.attachments)
             .components(value.components);
 
         if let Some(content) = value.content {
             into = into.content(content);
-        }
-        if let Some(allowed_mentions) = value.allowed_mentions {
-            into = into.allowed_mentions(allowed_mentions);
         }
 
         into
     }
 }
 
-pub fn simple_send(content: impl Into<Cow<'static, str>>) -> Result<Vec<ResponseModel>> {
+impl<'a> From<ResponseBlueprint<'a>> for CreateMessage<'a> {
+    fn from(value: ResponseBlueprint<'a>) -> Self {
+        let mut into = Self::default()
+            .embeds(value.embeds)
+            .components(value.components);
+
+        if let Some(content) = value.content {
+            into = into.content(content);
+        }
+
+        into
+    }
+}
+
+pub fn simple_send<'a>(content: impl Into<Cow<'a, str>>) -> Result<Vec<ResponseModel<'a>>> {
     Ok(vec![ResponseModel::Send {
         blueprints: vec![ResponseBlueprint {
             content: Some(content.into()),
             ..Default::default()
-        }]
+        }],
     }])
 }

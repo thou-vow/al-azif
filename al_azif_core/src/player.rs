@@ -7,12 +7,15 @@ pub struct Player {
     pub borrowed_ids_tags: HashSet<FixedString>,
 }
 impl Player {
-    pub fn new(tag: &str) -> Self {
+    pub fn new(tag: impl AsRef<str>) -> Self {
+        Player::_new(tag.as_ref())
+    }
+    fn _new(tag: &str) -> Self {
         Self {
             tag: FixedString::from_str_trunc(tag),
             owned_ids_tags: HashSet::new(),
             borrowed_ids_tags: HashSet::new(),
-        } 
+        }
     }
 }
 impl Reflective for Player {

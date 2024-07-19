@@ -1,11 +1,10 @@
 use rand::Rng;
-use std::fmt;
-use std::fmt::{Display, Formatter};
+use std::fmt::{self, Display, Formatter};
 
 pub mod roll {
     use super::*;
 
-    pub fn execute_roll_expression(dices: i64, sides: i64, advantage: i64) -> (i64, String) {
+    pub fn execute_expression(dices: i64, sides: i64, advantage: i64) -> (i64, String) {
         let rolls_amount = (dices + advantage.abs()) as usize;
         let mut rng = rand::thread_rng();
         let mut indexed_rolled_values = Vec::new();
@@ -33,10 +32,10 @@ pub mod roll {
         for _ in 0..dices {
             let (i, value) = iter.next().unwrap();
             outcome += *value;
-            summary_values[*i as usize] = RollSummaryValue::Selected(*value);
+            summary_values[*i] = RollSummaryValue::Selected(*value);
         }
         for (i, value) in iter {
-            summary_values[*i as usize] = RollSummaryValue::NotSelected(*value);
+            summary_values[*i] = RollSummaryValue::NotSelected(*value);
         }
 
         (outcome, RollSummary::new(summary_values).to_string())
