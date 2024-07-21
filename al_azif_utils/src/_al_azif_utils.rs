@@ -1,3 +1,3 @@
 pub mod fmt;
-pub mod math;
+pub mod roll;
 pub mod serenity;

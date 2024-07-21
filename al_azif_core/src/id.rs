@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Id {
@@ -18,6 +18,7 @@ pub struct Id {
     pub dexterity: i64,
     pub cognition: i64,
     pub charisma: i64,
+    pub effects: Vec<Effect>,
     pub color: Option<u32>,
     pub current_battle_tag: Option<FixedString>,
 }
@@ -43,9 +44,14 @@ impl Id {
             dexterity: 5,
             cognition: 5,
             charisma: 5,
+            effects: Vec::new(),
             color: None,
             current_battle_tag: None,
         }
+    }
+    pub fn assign_name(mut self, tag: impl AsRef<str>) -> Self {
+        self.name = FixedString::from_str_trunc(tag.as_ref());
+        self
     }
 }
 impl Id {
@@ -60,23 +66,17 @@ impl Id {
 
         self.current_battle_tag = Some(battle.tag.clone());
     }
-    pub async fn start_turn<'a>(
-        &mut self,
-        _battle: &mut Battle,
-    ) -> Result<Vec<ResponseBlueprint<'a>>> {
+    pub async fn start_turn<'a>(&mut self, _battle: &mut Battle) -> Result<Blueprints<'a>> {
         let mut blueprints = Vec::new();
 
-        blueprints.push(ResponseBlueprint {
-            content: Some(f!("🕒 | Agora é a vez de **{}**.", self.name).into()),
-            ..Default::default()
-        });
+        blueprints.push(
+            ResponseBlueprint::default()
+                .set_content(f!("🕒 | Agora é a vez de **{}**.", self.name)),
+        );
 
         Ok(blueprints)
     }
-    pub async fn end_turn<'a>(
-        &mut self,
-        battle: &mut Battle,
-    ) -> Result<Vec<ResponseBlueprint<'a>>> {
+    pub async fn end_turn<'a>(&mut self, battle: &mut Battle) -> Result<Blueprints<'a>> {
         let mut blueprints = Vec::new();
 
         battle
@@ -85,18 +85,121 @@ impl Id {
             .unwrap()
             .sub_turn_value(battle.turn_value_cap);
 
-        blueprints.push(ResponseBlueprint {
-            content: Some(f!("🏁 | Fim do turno de **{}**.", self.name).into()),
-            ..Default::default()
-        });
+        blueprints.push(
+            ResponseBlueprint::default().set_content(f!("🏁 | Fim do turno de **{}**.", self.name)),
+        );
+        blueprints.extend(self.effects_on_turn_end(battle));
 
         Ok(blueprints)
     }
-    pub fn evaluate_damage_to_receive(&self, value: i64) -> i64 {
-        value
+    pub fn take_damage<'a>(&mut self, mut damage: i64) -> Blueprints<'a> {
+        let mut blueprints = Vec::new();
+        (damage, blueprints) = self.effects_on_take_damage(damage);
+
+        let previous_hp = self.hp;
+        self.hp = (self.hp - damage).clamp(0, self.hp);
+
+        blueprints.push(ResponseBlueprint::default().set_content(f!(
+            "{STRIKE_EMOJI} | **{}** recebeu **{}** de dano. [{HP_SHORT}: **{}** → **{}**]",
+            self.name,
+            mark_thousands(damage),
+            mark_thousands(previous_hp),
+            mark_thousands(self.hp),
+        )));
+
+        blueprints
     }
-    pub fn receive_damage(&mut self, value: i64) {
-        self.hp = (self.hp - self.evaluate_damage_to_receive(value)).clamp(0, self.hp)
+    pub fn acquire_effect<'a>(&mut self, new_effect: Effect) -> Blueprints<'a> {
+        let mut blueprints = Vec::new();
+
+        'already_acquired_or_not: {
+            for effect in self.effects.iter_mut() {
+                match (effect, &new_effect) {
+                    (Effect::Block, Effect::Block) => break 'already_acquired_or_not,
+                    (
+                        Effect::Rise {
+                            might_increase,
+                            turn_duration,
+                        },
+                        Effect::Rise {
+                            might_increase: new_might_increase,
+                            turn_duration: new_turn_duration,
+                        },
+                    ) => {
+                        *might_increase = *new_might_increase;
+                        *turn_duration = *new_turn_duration;
+                        break 'already_acquired_or_not;
+                    }
+                    _ => (),
+                }
+            }
+            self.effects.push(new_effect);
+        }
+
+        blueprints
+    }
+}
+impl Id {
+    pub fn evaluate_might_bonuses(&mut self) -> i64 {
+        let mut bonuses = 0;
+
+        for effect in self.effects.iter() {
+            match effect {
+                Effect::Rise { might_increase, .. } => {
+                    bonuses += *might_increase;
+                }
+                _ => (),
+            }
+        }
+
+        bonuses
+    }
+    pub fn effects_on_take_damage<'a>(&mut self, mut damage: i64) -> (i64, Blueprints<'a>) {
+        let mut blueprints = Vec::new();
+        let mut i = 0;
+
+        while i < self.effects.len() {
+            match &mut self.effects[i] {
+                Effect::Block => {
+                    damage /= 2;
+                    self.effects.remove(i);
+                }
+                _ => i += 1,
+            }
+        }
+
+        (damage, blueprints)
+    }
+    pub fn effects_on_turn_end<'a>(&mut self, _battle: &mut Battle) -> Blueprints<'a> {
+        let mut blueprints = Vec::new();
+        let mut i = 0;
+
+        while i < self.effects.len() {
+            match &mut self.effects[i] {
+                Effect::Rise {
+                    turn_duration,
+                    might_increase,
+                } => {
+                    if *turn_duration <= 0 {
+                        blueprints.push(ResponseBlueprint::default().set_content(f!(
+                            "💪 | **{}** perdeu o efeito **Subir**. [**{}** {MGT_EMOJI}]",
+                            self.name,
+                            mark_thousands_and_show_sign(*might_increase * -1),
+                        )));
+
+                        self.effects.remove(i);
+
+                        continue;
+                    } else {
+                        *turn_duration -= 1;
+                        i += 1;
+                    }
+                }
+                _ => i += 1,
+            }
+        }
+
+        blueprints
     }
 }
 impl Reflective for Id {

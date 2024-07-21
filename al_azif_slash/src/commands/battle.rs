@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub fn register() -> CreateCommand<'static> {
     CreateCommand::new("battle")
@@ -48,7 +48,7 @@ pub async fn run_command<'a>(
     bot: &impl AsBot,
     slash: &CommandInteraction,
     args: &[ResolvedOption<'_>],
-) -> Result<Models<'a>> {
+) -> Result<Responses<'a>> {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
         unreachable!("The first argument of the 'id' command must be a subcommand!");
     };
@@ -67,10 +67,10 @@ mod end {
     pub async fn run_command<'a>(
         bot: &impl AsBot,
         slash: &CommandInteraction,
-    ) -> Result<Models<'a>> {
+    ) -> Result<Responses<'a>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return response::simple_send("Não há uma batalha neste canal.");
+            return response::simple_send_and_delete("Não há uma batalha acontecendo neste canal.");
         };
 
         let battle = battle_m.read().await;
@@ -93,7 +93,7 @@ mod join {
         bot: &impl AsBot,
         slash: &CommandInteraction,
         args: &[ResolvedOption<'_>],
-    ) -> Result<Models<'a>> {
+    ) -> Result<Responses<'a>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
             return response::simple_send("Não há uma batalha neste canal.");
@@ -121,7 +121,7 @@ mod join {
         }
 
         if !invalid_id_tags.is_empty() {
-            let content = if invalid_id_tags.len() > 1 {
+            let new_content = if invalid_id_tags.len() > 1 {
                 let concat_tags = join_with_and(
                     invalid_id_tags
                         .iter()
@@ -136,11 +136,11 @@ mod join {
                 )
             };
 
-            blueprints.push(ResponseBlueprint::default().assign_content(content));
+            return response::simple_send_and_delete(new_content);
         }
 
         if !already_in_battle_id_tags.is_empty() {
-            let content = if already_in_battle_id_tags.len() > 1 {
+            let new_content = if already_in_battle_id_tags.len() > 1 {
                 let concat_tags = join_with_and(
                     already_in_battle_id_tags
                         .iter()
@@ -155,13 +155,7 @@ mod join {
                 )
             };
 
-            blueprints.push(ResponseBlueprint::default().assign_content(content));
-        }
-
-        if id_ms.is_empty() {
-            blueprints
-                .push(ResponseBlueprint::default().assign_content("Nenhum Id entrou em batalha."));
-            return Ok(vec![ResponseModel::send(blueprints)]);
+            return response::simple_send_and_delete(new_content);
         }
 
         let mut joined_id_names = Vec::new();
@@ -186,9 +180,9 @@ mod join {
             )
         };
 
-        blueprints.push(ResponseBlueprint::default().assign_content(content));
+        blueprints.push(ResponseBlueprint::default().set_content(content));
 
-        Ok(vec![ResponseModel::send(blueprints)])
+        Ok(vec![Response::send(blueprints)])
     }
 }
 
@@ -199,7 +193,7 @@ mod start {
         bot: &impl AsBot,
         slash: &CommandInteraction,
         args: &[ResolvedOption<'_>],
-    ) -> Result<Vec<ResponseModel<'a>>> {
+    ) -> Result<Vec<Response<'a>>> {
         let battle_tag = slash.channel_id.to_string();
         if Mirror::<Battle>::get(bot, &battle_tag).await.is_ok() {
             return response::simple_send("Já está ocorrendo uma batalha neste canal.");
@@ -208,8 +202,6 @@ mod start {
         let ResolvedValue::String(id_tags) = args[0].value else {
             unreachable!("The 'ids' argument of the 'battle start' command must be a string!");
         };
-
-        let mut blueprints = Vec::new();
 
         let mut invalid_id_tags = Vec::new();
         let mut already_in_battle_id_tags = Vec::new();
@@ -227,7 +219,7 @@ mod start {
         }
 
         if !invalid_id_tags.is_empty() {
-            let content = if invalid_id_tags.len() > 1 {
+            let new_content = if invalid_id_tags.len() > 1 {
                 let concat_tags = join_with_and(
                     invalid_id_tags
                         .iter()
@@ -242,11 +234,11 @@ mod start {
                 )
             };
 
-            blueprints.push(ResponseBlueprint::default().assign_content(content));
+            return response::simple_send_and_delete(new_content);
         }
 
         if !already_in_battle_id_tags.is_empty() {
-            let content = if already_in_battle_id_tags.len() > 1 {
+            let new_content = if already_in_battle_id_tags.len() > 1 {
                 let concat_tags = join_with_and(
                     already_in_battle_id_tags
                         .iter()
@@ -261,16 +253,16 @@ mod start {
                 )
             };
 
-            blueprints.push(ResponseBlueprint::default().assign_content(content));
+            return response::simple_send_and_delete(new_content);
         }
 
         if id_ms.len() < 2 {
-            blueprints.push(
-                ResponseBlueprint::default()
-                    .assign_content("Precisa de pelo menos 2 Ids para iniciar uma batalha."),
+            return response::simple_send_and_delete(
+                "Precisa de pelo menos 2 Ids para iniciar uma batalha.",
             );
-            return Ok(vec![ResponseModel::send(blueprints)]);
         }
+
+        let mut blueprints = Vec::new();
 
         let mut battle = Battle::new(battle_tag);
         for id_m in id_ms {
@@ -281,6 +273,6 @@ mod start {
         blueprints.push(battle.generate_turn_screen(bot).await?);
         Mirror::<Battle>::set_and_get(bot, battle).await?;
 
-        Ok(vec![ResponseModel::send(blueprints)])
+        Ok(vec![Response::send(blueprints)])
     }
 }

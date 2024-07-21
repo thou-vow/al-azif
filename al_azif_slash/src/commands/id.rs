@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub fn register() -> CreateCommand<'static> {
     CreateCommand::new("id")
@@ -27,7 +27,7 @@ pub async fn run_command<'a>(
     bot: &impl AsBot,
     _slash: &CommandInteraction,
     args: &[ResolvedOption<'_>],
-) -> Result<Models<'a>> {
+) -> Result<Responses<'a>> {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
         unreachable!("The first argument of the 'id' command must be a subcommand!");
     };
@@ -42,7 +42,7 @@ pub async fn run_component<'a>(
     bot: &impl AsBot,
     _comp: &ComponentInteraction,
     args: &[&str],
-) -> Result<Models<'a>> {
+) -> Result<Responses<'a>> {
     match args[0] {
         "distribute" => distribute::run_component(bot, &args[1..]).await,
         invalid => unreachable!("Invalid component branch for 'id' components: {invalid}"),
@@ -55,25 +55,24 @@ mod distribute {
     pub async fn run_command<'a>(
         bot: &impl AsBot,
         args: &[ResolvedOption<'_>],
-    ) -> Result<Models<'a>> {
+    ) -> Result<Responses<'a>> {
         let ResolvedValue::String(id_tag) = args[0].value else {
             unreachable!("The 'id' argument of the 'id distribute' command must be a string!");
         };
         let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
-            return response::simple_send("Informe um Id válido.");
+            return response::simple_send_and_delete("Informe um Id válido.");
         };
 
         let id = id_m.read().await;
-        let embed = generate_embed(&id).await?;
-        let components = generate_attribute_components(&id).await?;
+        let new_embed = generate_embed(&id).await?;
+        let new_components = generate_attribute_components(&id).await?;
 
-        Ok(vec![ResponseModel::send(vec![ResponseBlueprint::default(
-        )
-        .assign_embeds(vec![embed])
-        .assign_components(components)])])
+        Ok(vec![Response::send(vec![ResponseBlueprint::default()
+            .add_embed(new_embed)
+            .set_components(new_components)])])
     }
 
-    pub async fn run_component<'a>(bot: &impl AsBot, args: &[&str]) -> Result<Models<'a>> {
+    pub async fn run_component<'a>(bot: &impl AsBot, args: &[&str]) -> Result<Responses<'a>> {
         let id_m = Mirror::<Id>::get(bot, args[0]).await?;
 
         let components;
@@ -95,10 +94,10 @@ mod distribute {
 
         let embed = generate_embed(&*id_m.read().await).await?;
 
-        Ok(vec![ResponseModel::update(
+        Ok(vec![Response::update(
             ResponseBlueprint::default()
-                .assign_embeds(vec![embed])
-                .assign_components(components),
+                .set_embeds(vec![embed])
+                .set_components(components),
         )])
     }
 
@@ -148,7 +147,7 @@ mod distribute {
             mark_thousands(id.charisma)
         );
 
-        let embed = CreateEmbed::new()
+        let new_embed = CreateEmbed::new()
             .title(f!("{} 🎊 [{}]", id.name, mark_thousands(id.lvl)))
             .color(id.color.unwrap_or(0x36393e))
             .description(f!(
@@ -162,7 +161,7 @@ mod distribute {
                 mark_thousands(id.points_to_distribute)
             )));
 
-        Ok(embed)
+        Ok(new_embed)
     }
 
     async fn generate_attribute_components<'a>(id: &Id) -> Result<Vec<CreateActionRow<'a>>> {

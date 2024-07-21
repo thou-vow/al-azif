@@ -1,11 +1,11 @@
 use std::vec;
 
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub async fn run_command<'a>(
     ctx: &Context,
     slash: &CommandInteraction,
-) -> Result<Vec<ResponseModel<'a>>> {
+) -> Result<Vec<Response<'a>>> {
     let initial_point = Instant::now();
 
     slash

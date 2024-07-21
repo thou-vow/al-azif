@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 use al_azif_slash::commands::*;
 
 pub async fn register_commands(bot: &impl AsBot, ctx: &Context) -> Result<()> {
@@ -25,60 +25,111 @@ pub async fn run_command(
         _ => return Ok(()),
     };
 
-    let models = execution_result?;
+    let responses = execution_result?;
 
-    perform_response_models(ctx, slash, models).await
+    perform_response_responses(ctx, slash, responses).await
 }
 
-pub async fn perform_response_models<'a>(
+pub async fn perform_response_responses<'a>(
     ctx: &Context,
     slash: &CommandInteraction,
-    models: Models<'a>,
+    responses: Responses<'a>,
 ) -> Result<()> {
-    for model in models {
-        match model {
-            ResponseModel::Send { blueprints } => {
+    let mut msgs_to_delete = Vec::new();
+
+    for response in responses {
+        match response {
+            Response::DeleteOriginal => (),
+            Response::Send { blueprints } => {
                 let Some(first_blueprint) = blueprints.first() else {
-                    return Ok(());
+                    continue;
                 };
 
                 slash
                     .create_response(
                         &ctx.http,
-                        CreateInteractionResponse::Message(CreateInteractionResponseMessage::from(
-                            first_blueprint.clone(),
-                        )),
+                        CreateInteractionResponse::Message(
+                            first_blueprint.create_interaction_response_message(),
+                        ),
                     )
                     .await?;
 
                 for blueprint in blueprints.iter().skip(1) {
                     slash
                         .channel_id
-                        .send_message(&ctx.http, CreateMessage::from(blueprint.clone()))
+                        .send_message(&ctx.http, blueprint.create_message())
                         .await?;
                 }
             }
-            ResponseModel::SendEphemeral { blueprint } => {
+            Response::SendAndDelete { blueprints } => {
+                let Some(first_blueprint) = blueprints.first() else {
+                    continue;
+                };
+
                 slash
                     .create_response(
                         &ctx.http,
                         CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::from(blueprint.clone())
+                            first_blueprint.create_interaction_response_message(),
+                        ),
+                    )
+                    .await?;
+                msgs_to_delete.push(
+                    ctx.http
+                        .get_original_interaction_response(&slash.token)
+                        .await?,
+                );
+
+                for blueprint in blueprints.iter().skip(1) {
+                    msgs_to_delete.push(
+                        slash
+                            .channel_id
+                            .send_message(&ctx.http, blueprint.create_message())
+                            .await?,
+                    );
+                }
+            }
+            Response::SendEphemeral { blueprint } => {
+                slash
+                    .create_response(
+                        &ctx.http,
+                        CreateInteractionResponse::Message(
+                            blueprint
+                                .create_interaction_response_message()
                                 .ephemeral(true),
                         ),
                     )
                     .await?;
             }
-            ResponseModel::SendLoose { blueprints } => {
+            Response::SendLoose { blueprints } => {
                 for blueprint in blueprints {
                     slash
                         .channel_id
-                        .send_message(&ctx.http, CreateMessage::from(blueprint.clone()))
+                        .send_message(&ctx.http, blueprint.create_message())
                         .await?;
                 }
             }
-            _ => unreachable!("Unsupported ResponseModel for slash command: {:?}", model),
+            Response::SendLooseAndDelete { blueprints } => {
+                for blueprint in blueprints {
+                    msgs_to_delete.push(
+                        slash
+                            .channel_id
+                            .send_message(&ctx.http, blueprint.create_message())
+                            .await?,
+                    );
+                }
+            }
+            Response::Update { .. } => (),
+            Response::UpdateDelayless { .. } => (),
         }
+    }
+
+    tokio::time::sleep(RESPONSE_TIMEOUT).await;
+
+    for msg_to_delete in msgs_to_delete {
+        msg_to_delete.delete(&ctx.http, None).await?;
+
+        tokio::time::sleep(RESPONSE_INTERVAL).await;
     }
 
     Ok(())

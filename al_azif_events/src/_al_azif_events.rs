@@ -1,10 +1,12 @@
-pub mod action;
 pub mod component;
 pub mod prefix;
-pub mod prelude;
+pub mod _prelude;
 pub mod slash;
+pub mod unclassified {
+    pub mod receive;
+}
 
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub async fn try_interaction(bot: &impl AsBot, ctx: &Context, intr: &Interaction) -> Result<()> {
     match intr {

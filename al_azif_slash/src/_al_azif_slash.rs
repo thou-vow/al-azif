@@ -4,4 +4,4 @@ pub mod commands {
     pub mod id;
     pub mod ping;
 }
-pub mod prelude;
+pub mod _prelude;

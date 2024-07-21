@@ -1,28 +1,49 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub type Blueprints<'a> = Vec<ResponseBlueprint<'a>>;
-pub type Models<'a> = Vec<ResponseModel<'a>>;
+pub type Responses<'a> = Vec<Response<'a>>;
 
 #[derive(Debug)]
-pub enum ResponseModel<'a> {
+pub enum Response<'a> {
+    // Only for prefix and slash commands
+    DeleteOriginal,
     Send {
         blueprints: Vec<ResponseBlueprint<'a>>,
     },
-    // Only for interactions
+    SendAndDelete {
+        blueprints: Vec<ResponseBlueprint<'a>>,
+    },
+    // Only for slash commands and component-based interactions
     SendEphemeral {
         blueprint: ResponseBlueprint<'a>,
     },
     SendLoose {
         blueprints: Vec<ResponseBlueprint<'a>>,
     },
+    SendLooseAndDelete {
+        blueprints: Vec<ResponseBlueprint<'a>>,
+    },
     // Only for component-based interactions
     Update {
         blueprint: ResponseBlueprint<'a>,
     },
+    // Only for component-based interactions
+    UpdateDelayless {
+        blueprint: ResponseBlueprint<'a>,
+    },
 }
-impl<'a> ResponseModel<'a> {
+impl<'a> Response<'a> {
+    pub fn delete_original() -> Self {
+        Self::DeleteOriginal
+    }
     pub fn send(blueprints: Vec<ResponseBlueprint<'a>>) -> Self {
         Self::Send { blueprints }
+    }
+    pub fn send_and_delete(blueprints: Vec<ResponseBlueprint<'a>>) -> Self {
+        Self::SendAndDelete { blueprints }
+    }
+    pub fn send_and_delete_with_original(blueprints: Vec<ResponseBlueprint<'a>>) -> Vec<Self> {
+        vec![Self::delete_original(), Self::send_and_delete(blueprints)]
     }
     pub fn send_ephemeral(blueprint: ResponseBlueprint<'a>) -> Self {
         Self::SendEphemeral { blueprint }
@@ -30,80 +51,105 @@ impl<'a> ResponseModel<'a> {
     pub fn send_loose(blueprints: Vec<ResponseBlueprint<'a>>) -> Self {
         Self::SendLoose { blueprints }
     }
+    pub fn send_loose_and_delete(blueprints: Vec<ResponseBlueprint<'a>>) -> Self {
+        Self::SendLooseAndDelete { blueprints }
+    }
+    pub fn send_loose_and_delete_with_original(
+        blueprints: Vec<ResponseBlueprint<'a>>,
+    ) -> Vec<Self> {
+        vec![
+            Self::delete_original(),
+            Self::send_loose_and_delete(blueprints),
+        ]
+    }
     pub fn update(blueprint: ResponseBlueprint<'a>) -> Self {
         Self::Update { blueprint }
+    }
+    pub fn update_delayless(blueprint: ResponseBlueprint<'a>) -> Self {
+        Self::UpdateDelayless { blueprint }
     }
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct ResponseBlueprint<'a> {
     // Missing attachments and allowed_mentions
-    pub content: Option<Cow<'a, str>>,
-    pub embeds: Cow<'a, [CreateEmbed<'a>]>,
-    pub components: Cow<'a, [CreateActionRow<'a>]>,
+    pub new_content: Option<Cow<'a, str>>,
+    pub new_embeds: Cow<'a, [CreateEmbed<'a>]>,
+    pub new_components: Cow<'a, [CreateActionRow<'a>]>,
 }
 impl<'a> ResponseBlueprint<'a> {
-    pub fn assign_content(mut self, content: impl Into<Cow<'a, str>>) -> Self {
-        self.content = Some(content.into());
+    pub fn add_embed(mut self, new_embed: CreateEmbed<'a>) -> Self {
+        self.new_embeds.to_mut().push(new_embed);
         self
     }
-    pub fn assign_embeds(mut self, embeds: impl Into<Cow<'a, [CreateEmbed<'a>]>>) -> Self {
-        self.embeds = embeds.into();
+    pub fn set_content(mut self, new_content: impl Into<Cow<'a, str>>) -> Self {
+        self.new_content = Some(new_content.into());
         self
     }
-    pub fn assign_components(
+    pub fn set_embeds(mut self, new_embeds: impl Into<Cow<'a, [CreateEmbed<'a>]>>) -> Self {
+        self.new_embeds = new_embeds.into();
+        self
+    }
+    pub fn set_components(
         mut self,
-        components: impl Into<Cow<'a, [CreateActionRow<'a>]>>,
+        new_components: impl Into<Cow<'a, [CreateActionRow<'a>]>>,
     ) -> Self {
-        self.components = components.into();
+        self.new_components = new_components.into();
         self
     }
 }
 impl<'a> ResponseBlueprint<'a> {
-    pub fn get_mut_button(&mut self, row: usize, column: usize) -> Option<&mut CreateButton<'a>> {
-        match self.components.to_mut().get_mut(row) {
-            Some(CreateActionRow::Buttons(buttons)) => buttons.get_mut(column),
-            _ => None,
+    pub fn create_interaction_response_message(&self) -> CreateInteractionResponseMessage<'a> {
+        let mut into = CreateInteractionResponseMessage::default()
+            .embeds(self.new_embeds.clone())
+            .components(self.new_components.clone());
+
+        if let Some(new_content) = &self.new_content {
+            into = into.content(new_content.clone());
         }
-    }
-    pub fn get_mut_embed(&mut self, index: usize) -> Option<&mut CreateEmbed<'a>> {
-        self.embeds.to_mut().get_mut(index)
-    }
-}
 
-impl<'a> From<ResponseBlueprint<'a>> for CreateInteractionResponseMessage<'a> {
-    fn from(value: ResponseBlueprint<'a>) -> Self {
-        let mut into = Self::default()
-            .embeds(value.embeds)
-            .components(value.components);
+        into
+    }
+    pub fn create_message(&self) -> CreateMessage<'a> {
+        let mut into = CreateMessage::default()
+            .embeds(self.new_embeds.clone())
+            .components(self.new_components.clone());
 
-        if let Some(content) = value.content {
-            into = into.content(content);
+        if let Some(new_content) = &self.new_content {
+            into = into.content(new_content.clone());
         }
 
         into
     }
 }
 
-impl<'a> From<ResponseBlueprint<'a>> for CreateMessage<'a> {
-    fn from(value: ResponseBlueprint<'a>) -> Self {
-        let mut into = Self::default()
-            .embeds(value.embeds)
-            .components(value.components);
-
-        if let Some(content) = value.content {
-            into = into.content(content);
-        }
-
-        into
-    }
-}
-
-pub fn simple_send<'a>(content: impl Into<Cow<'a, str>>) -> Result<Vec<ResponseModel<'a>>> {
-    Ok(vec![ResponseModel::Send {
+pub fn simple_send<'a>(new_content: impl Into<Cow<'a, str>>) -> Result<Vec<Response<'a>>> {
+    Ok(vec![Response::Send {
         blueprints: vec![ResponseBlueprint {
-            content: Some(content.into()),
+            new_content: Some(new_content.into()),
             ..Default::default()
         }],
     }])
+}
+
+pub fn simple_send_and_delete<'a>(
+    new_content: impl Into<Cow<'a, str>>,
+) -> Result<Vec<Response<'a>>> {
+    Ok(vec![Response::SendAndDelete {
+        blueprints: vec![ResponseBlueprint {
+            new_content: Some(new_content.into()),
+            ..Default::default()
+        }],
+    }])
+}
+
+pub fn simple_send_and_delete_with_original<'a>(
+    new_content: impl Into<Cow<'a, str>>,
+) -> Result<Vec<Response<'a>>> {
+    Ok(Response::send_and_delete_with_original(vec![
+        ResponseBlueprint {
+            new_content: Some(new_content.into()),
+            ..Default::default()
+        },
+    ]))
 }

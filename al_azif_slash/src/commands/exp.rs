@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub fn register() -> CreateCommand<'static> {
     CreateCommand::new("exp")
@@ -31,7 +31,7 @@ pub async fn run_command<'a>(
     bot: &impl AsBot,
     _slash: &CommandInteraction,
     args: &[ResolvedOption<'_>],
-) -> Result<Models<'a>> {
+) -> Result<Responses<'a>> {
     let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
         unreachable!("The first argument of the 'exp' command must be a subcommand!");
     };
@@ -48,7 +48,7 @@ mod bestow {
     pub async fn run_command<'a>(
         bot: &impl AsBot,
         args: &[ResolvedOption<'_>],
-    ) -> Result<Vec<ResponseModel<'a>>> {
+    ) -> Result<Vec<Response<'a>>> {
         let mut blueprints = Vec::new();
 
         let ResolvedValue::String(id_tags) = args[0].value else {
@@ -67,7 +67,7 @@ mod bestow {
         }
 
         if !invalid_id_tags.is_empty() {
-            let content = if invalid_id_tags.len() > 1 {
+            let new_content = if invalid_id_tags.len() > 1 {
                 let concat_tags = join_with_and(
                     invalid_id_tags
                         .iter()
@@ -82,15 +82,7 @@ mod bestow {
                 )
             };
 
-            blueprints.push(ResponseBlueprint::default().assign_content(content));
-        }
-
-        if id_ms.is_empty() {
-            blueprints.push(
-                ResponseBlueprint::default()
-                    .assign_content("Você precisa de pelo menos um Id para conceder experiência."),
-            );
-            return Ok(vec![ResponseModel::send(blueprints)]);
+            return response::simple_send_and_delete(new_content);
         }
 
         let ResolvedValue::Integer(value) = args[1].value else {
@@ -111,25 +103,25 @@ mod bestow {
             }
 
             if previous_lvl != id.lvl {
-                let mut content = f!(
+                let mut new_content = f!(
                     "**{}** obteve **{}** de experiência e subiu de nível [**{}** ➜ **{}**]",
                     id.name,
                     mark_thousands(value),
                     mark_thousands(previous_lvl),
                     mark_thousands(id.lvl)
                 );
-                content.push_str(&f!(
+                new_content.push_str(&f!(
                     "Pode distribuir **{}** pontos nos atributos.",
                     mark_thousands(id.points_to_distribute)
                 ));
-                content.push_str(&f!(
+                new_content.push_str(&f!(
                     "Falta **{}** de experiência para o próximo nível.",
                     mark_thousands(xp_to_next_level(id.lvl) - id.xp)
                 ));
 
-                blueprints.push(ResponseBlueprint::default().assign_content(content));
+                blueprints.push(ResponseBlueprint::default().set_content(new_content));
             } else {
-                blueprints.push(ResponseBlueprint::default().assign_content(f!(
+                blueprints.push(ResponseBlueprint::default().set_content(f!(
                     "**{}** obteve **{}** de experiência. Falta **{}** para o próximo nível.",
                     id.name,
                     mark_thousands(value),
@@ -138,6 +130,6 @@ mod bestow {
             }
         }
 
-        Ok(vec![ResponseModel::send(blueprints)])
+        Ok(vec![Response::send(blueprints)])
     }
 }

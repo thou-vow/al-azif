@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub trait AsBot:
     AsRef<InMemoryStore<Battle>> + AsRef<InMemoryStore<Id>> + AsRef<InMemoryStore<Player>>

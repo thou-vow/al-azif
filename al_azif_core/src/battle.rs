@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Battle {
@@ -41,32 +41,28 @@ impl Battle {
             let id = id_m.read().await;
 
             desc += &f!(
-                "**{}** [``{id_tag}``]\n{filled_portion}{empty_portion}  **{}** / **{}**",
+                "**{}** `{id_tag}`\n{filled_portion}{empty_portion}  **{}** / **{}**",
                 id.name,
                 mark_thousands(opponent.turn_value),
                 mark_thousands(self.turn_value_cap)
             );
 
-            match opponent.last_total_increased_turn_value_amount.signum() {
-                1 => {
-                    desc += &f!(" *+{}*", opponent.last_total_increased_turn_value_amount);
-                    opponent.last_total_increased_turn_value_amount = 0;
-                }
-                -1 => {
-                    desc += &f!(" *{}*", opponent.last_total_increased_turn_value_amount);
-                    opponent.last_total_increased_turn_value_amount = 0;
-                }
-                _ => (),
+            if opponent.last_total_increased_turn_value_amount != 0 {
+                desc += &f!(
+                    " *{}*",
+                    mark_thousands_and_show_sign(opponent.last_total_increased_turn_value_amount)
+                );
+                opponent.last_total_increased_turn_value_amount = 0;
             }
 
             desc += "\n\n";
         }
 
-        let embed = CreateEmbed::default()
+        let new_embed = CreateEmbed::default()
             .title(f!("Fase {}", self.phase_counter))
             .description(desc);
 
-        Ok(ResponseBlueprint::default().assign_embeds(vec![embed]))
+        Ok(ResponseBlueprint::default().set_embeds(vec![new_embed]))
     }
     fn get_next_turn_owner(&self) -> Option<&str> {
         self.opponents
@@ -113,13 +109,13 @@ impl Opponent {
 pub enum Moment {
     None,
     AttackPrimary {
-        action_tag: FixedString,
+        primary_action_tag: FixedString,
         attacker_tag: FixedString,
         target_tag: FixedString,
         security_key: i64,
     },
     AttackReactive {
-        action_tag: FixedString,
+        primary_action_tag: FixedString,
         attacker_tag: FixedString,
         target_tag: FixedString,
         security_key: i64,
@@ -145,6 +141,10 @@ pub async fn advance<'a>(
                 .await
                 .end_turn(battle)
                 .await?,
+        );
+        blueprints.push(
+            ResponseBlueprint::default()
+                .set_content("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"),
         );
     }
 
@@ -191,8 +191,7 @@ pub async fn start_next_phase<'a>(bot: &impl AsBot, battle: &mut Battle) -> Resu
         opponent.add_turn_value(id.movement);
     }
 
-    blueprints
-        .push(ResponseBlueprint::default().assign_content("🚩 | Iniciando a próxima fase..."));
+    blueprints.push(ResponseBlueprint::default().set_content("🚩 | Iniciando a próxima fase..."));
 
     Ok(blueprints)
 }

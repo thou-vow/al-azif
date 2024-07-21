@@ -17,6 +17,14 @@ pub fn mark_thousands(num: i64) -> String {
     formatted_num
 }
 
+pub fn mark_thousands_and_show_sign(num: i64) -> String {
+    let mut formatted_num = mark_thousands(num);
+    if num > 0 {
+        formatted_num = format!("+{formatted_num}");
+    }
+    formatted_num
+}
+
 pub fn join_with_and(words: Vec<impl AsRef<str>>) -> String {
     _join_with_and(words.iter().map(|word| word.as_ref()).collect())
 }

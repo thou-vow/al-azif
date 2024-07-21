@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub fn get_accuracy_bonus_of_attack(action_tag: &str) -> i64 {
     match action_tag {
@@ -14,9 +14,9 @@ pub fn get_evasion_bonus_of_dodge(action_tag: &str) -> i64 {
     }
 }
 
-pub fn execute_action<'a>(action_tag: &str, user: &Id, target: &mut Id) -> Result<Blueprints<'a>> {
+pub fn execute_attack<'a>(action_tag: &str, attacker: &mut Id, target: &mut Id) -> Blueprints<'a> {
     match action_tag {
-        "attack" => attack::execute(user, target),
+        "attack" => attack::execute(attacker, target),
         _ => unreachable!("Invalid action tag: {}", action_tag),
     }
 }

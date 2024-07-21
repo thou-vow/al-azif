@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::_prelude::*;
 
 pub fn create<'a>(
     content: impl Into<Cow<'a, str>>,
@@ -9,12 +9,12 @@ pub fn create<'a>(
         .style(ButtonStyle::Danger);
 
     Ok(ResponseBlueprint::default()
-        .assign_content(content)
-        .assign_components(vec![CreateActionRow::Buttons(vec![receive_button])]))
+        .set_content(content)
+        .set_components(vec![CreateActionRow::Buttons(vec![receive_button])]))
 }
 
 pub fn disable_button<'a>(message: &Message, button_column: usize) -> ResponseBlueprint<'a> {
-    let original_buttons = message
+    let buttons = message
         .components
         .first()
         .unwrap()
@@ -29,17 +29,17 @@ pub fn disable_button<'a>(message: &Message, button_column: usize) -> ResponseBl
         })
         .collect::<Vec<&Button>>();
 
-    let buttons = original_buttons
+    let new_buttons = buttons
             .iter()
             .take(button_column)
             .map(|original_button| al_azif_utils::serenity::copy_button(original_button))
             .chain(iter::once(
-                al_azif_utils::serenity::copy_button(original_buttons.get(button_column)
+                al_azif_utils::serenity::copy_button(buttons.get(button_column)
                     .unwrap_or_else(|| unreachable!("Missing triggered button of index {button_column} on request reaction disable button")))
                     .disabled(true),
             ))
             .chain(
-                original_buttons
+                buttons
                     .iter()
                     .skip(button_column + 1)
                     .map(|original_button| al_azif_utils::serenity::copy_button(original_button)),
@@ -47,6 +47,6 @@ pub fn disable_button<'a>(message: &Message, button_column: usize) -> ResponseBl
             .collect::<Vec<_>>();
 
     ResponseBlueprint::default()
-        .assign_content(message.content.clone())
-        .assign_components(vec![CreateActionRow::Buttons(buttons)])
+        .set_content(message.content.clone())
+        .set_components(vec![CreateActionRow::Buttons(new_buttons)])
 }
