@@ -20,6 +20,7 @@ pub struct Id {
     pub charisma: i64,
     pub effects: Vec<Effect>,
     pub color: Option<u32>,
+    pub emoji: Option<FixedString>,
     pub current_battle_tag: Option<FixedString>,
 }
 impl Id {
@@ -46,6 +47,7 @@ impl Id {
             charisma: 5,
             effects: Vec::new(),
             color: None,
+            emoji: None,
             current_battle_tag: None,
         }
     }
@@ -118,15 +120,15 @@ impl Id {
                     (Effect::Block, Effect::Block) => break 'already_acquired_or_not,
                     (
                         Effect::Rise {
-                            might_increase,
+                            might_bonus,
                             turn_duration,
                         },
                         Effect::Rise {
-                            might_increase: new_might_increase,
+                            might_bonus: new_might_bonus,
                             turn_duration: new_turn_duration,
                         },
                     ) => {
-                        *might_increase = *new_might_increase;
+                        *might_bonus = *new_might_bonus;
                         *turn_duration = *new_turn_duration;
                         break 'already_acquired_or_not;
                     }
@@ -145,8 +147,8 @@ impl Id {
 
         for effect in self.effects.iter() {
             match effect {
-                Effect::Rise { might_increase, .. } => {
-                    bonuses += *might_increase;
+                Effect::Rise { might_bonus, .. } => {
+                    bonuses += *might_bonus;
                 }
                 _ => (),
             }
@@ -178,13 +180,13 @@ impl Id {
             match &mut self.effects[i] {
                 Effect::Rise {
                     turn_duration,
-                    might_increase,
+                    might_bonus,
                 } => {
                     if *turn_duration <= 0 {
                         blueprints.push(ResponseBlueprint::default().set_content(f!(
                             "💪 | **{}** perdeu o efeito **Subir**. [**{}** {MGT_EMOJI}]",
                             self.name,
-                            mark_thousands_and_show_sign(*might_increase * -1),
+                            mark_thousands_and_show_sign(*might_bonus * -1),
                         )));
 
                         self.effects.remove(i);

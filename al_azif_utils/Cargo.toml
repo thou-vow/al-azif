@@ -7,4 +7,5 @@ path = "src/_al_azif_utils.rs"
 
 [dependencies]
 rand.workspace = true
+serde.workspace = true
 serenity.workspace = true

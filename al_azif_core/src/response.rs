@@ -82,6 +82,10 @@ impl<'a> ResponseBlueprint<'a> {
         self.new_embeds.to_mut().push(new_embed);
         self
     }
+    pub fn add_buttons(mut self, new_buttons: Vec<CreateButton<'a>>) -> Self {
+        self.new_components.to_mut().push(CreateActionRow::Buttons(new_buttons));
+        self
+    }
     pub fn set_content(mut self, new_content: impl Into<Cow<'a, str>>) -> Self {
         self.new_content = Some(new_content.into());
         self

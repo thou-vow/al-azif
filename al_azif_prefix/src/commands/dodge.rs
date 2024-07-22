@@ -5,7 +5,8 @@ pub const ALIASES: [&str; 2] = ["dodge", "desviar"];
 pub const EVASION_BONUS: i64 = 0;
 
 pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Responses<'a>> {
-    let Ok(battle_m) = Mirror::<Battle>::get(bot, msg.channel_id.to_string()).await else {
+    let battle_tag = msg.channel_id.to_string();
+    let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
         return response::simple_send_and_delete_with_original(
             "Nenhuma batalha ocorrendo neste canal.",
         );
@@ -33,30 +34,18 @@ pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Response
 
     blueprints.extend(generate_preliminary_responses(&target));
 
-    let attacker = attacker_m.read().await;
-
     let security_key = Timestamp::now().unix_timestamp();
 
-    let create_dispute = CreateDispute::new("prefix dodge", "Desviar", security_key)
+    let dispute = Dispute::new(f!("{battle_tag}-{security_key}"), vec!["prefix", "dodge"])
         .add_member(
-            CreateDisputeMember::new(
-                TestKind::EvasionTest,
-                target_tag.clone(),
-                target.name.clone(),
+            DisputeMember::Test(Test::new(target_tag, TestKind::EvasionTest)
+                .set_advantage_bonus(EVASION_BONUS)
             )
-            .set_dices(3)
-            .set_sides(target.dexterity)
-            .set_advantage(EVASION_BONUS + 3),
         )
         .add_member(
-            CreateDisputeMember::new(
-                TestKind::AccuracyTest,
-                attacker_tag.clone(),
-                attacker.name.clone(),
+            DisputeMember::Test(Test::new(target_tag, TestKind::AccuracyTest)
+                .set_advantage_bonus(get_accuracy_bonus_of_attack(primary_action_tag))
             )
-            .set_dices(3)
-            .set_sides(attacker.dexterity)
-            .set_advantage(get_accuracy_bonus_of_attack(primary_action_tag) - 4),
         );
 
     battle.current_moment = Moment::AttackReactive {
@@ -66,7 +55,7 @@ pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Response
         security_key,
     };
 
-    blueprints.push(create_dispute.create());
+    blueprints.push(dispute.get_response_blueprint(bot).await?);
 
     Ok(vec![Response::send(blueprints)])
 }
@@ -77,7 +66,7 @@ pub async fn run_component<'a>(
     args: &[&str],
 ) -> Result<Responses<'a>> {
     let Ok(battle_m) = Mirror::<Battle>::get(bot, &comp.channel_id.to_string()).await else {
-        return response::simple_send("Nenhuma batalha ocorrendo neste canal.");
+        return response::simple_send_and_delete("Nenhuma batalha ocorrendo neste canal.");
     };
     let mut battle = battle_m.write().await;
 
@@ -95,7 +84,9 @@ pub async fn run_component<'a>(
         return Ok(Vec::new());
     }
 
-    let dispute = Dispute::from_message(&comp.message);
+    let Ok(dispute_m) = Mirror::<Dispute>::get(bot, args[0].parse::<i64>()?).await else {
+        Ok(Vec::new())
+    };
 
     let target_m = Mirror::<Id>::get(bot, target_tag).await?;
     let attacker_m = Mirror::<Id>::get(bot, attacker_tag).await?;
@@ -113,8 +104,7 @@ pub async fn run_component<'a>(
         _ => unreachable!("Invalid button column for 'dodge' component interaction (neither 0 or 1): {button_column}")
     };
 
-    let are_all_buttons_disabled =
-        dispute.are_all_other_buttons_disabled(button_column);
+    let are_all_buttons_disabled = dispute.are_all_other_buttons_disabled(button_column);
     let outcomes = dispute.outcomes();
 
     let mut responses = vec![Response::update_delayless(

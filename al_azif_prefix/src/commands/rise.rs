@@ -19,9 +19,9 @@ pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Response
 
     let mut user = user_m.write().await;
 
-    let might_increase = user.might / 2;
+    let might_bonus = user.might / 2;
     user.acquire_effect(Effect::Rise {
-        might_increase,
+        might_bonus,
         turn_duration: 1,
     });
 
@@ -30,7 +30,7 @@ pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Response
     blueprints.push(ResponseBlueprint::default().set_content(f!(
         "💪 | **{}** adquiriu o efeito **Subir** por **1** turno. [**{}** {MGT_EMOJI}]",
         user.name,
-        mark_thousands_and_show_sign(might_increase)
+        mark_thousands_and_show_sign(might_bonus)
     )));
 
     mem::drop(user);

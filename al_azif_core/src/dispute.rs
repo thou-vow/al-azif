@@ -1,5 +1,228 @@
 use crate::_prelude::*;
 
+#[derive(Deserialize, Serialize)]
+pub struct Dispute {
+    pub tag: FixedString,
+    pub lead_args: Vec<FixedString>,
+    pub title: FixedString,
+    pub members: Vec<DisputeMember>,
+}
+impl Dispute {
+    pub fn new(tag: impl AsRef<str>, lead_args: Vec<impl AsRef<str>>) -> Self {
+        Self {
+            tag: FixedString::from_str_trunc(tag.as_ref()),
+            lead_args: lead_args
+                .iter()
+                .map(|arg| FixedString::from_str_trunc(arg.as_ref()))
+                .collect(),
+            title: FixedString::default(),
+            members: Vec::new(),
+        }
+    }
+    pub fn add_member(mut self, member: DisputeMember) -> Self {
+        self.members.push(member);
+        self
+    }
+    pub fn set_title(mut self, title: impl AsRef<str>) -> Self {
+        self.title = FixedString::from_str_trunc(title.as_ref());
+        self
+    }
+}
+impl Dispute {
+    pub async fn evaluate_test(&mut self, bot: &impl AsBot, index: usize) -> Result<()> {
+        if let Some(DisputeMember::Test(test)) = self.members.get_mut(index) {
+            test.evaluate(bot).await?;
+        }
+
+        Ok(())
+    }
+}
+impl Dispute {
+    pub fn are_all_evaluated(&self) -> bool {
+        self.members
+            .iter()
+            .filter_map(|member| {
+                if let DisputeMember::Test(test) = member {
+                    Some(test)
+                } else {
+                    None
+                }
+            })
+            .all(|test| test.evaluation.is_some())
+    }
+    pub async fn get_response_blueprint<'a>(
+        &self,
+        bot: &impl AsBot,
+    ) -> Result<ResponseBlueprint<'a>> {
+        let joined_lead_args = self.lead_args.join(" ");
+
+        let mut new_buttons = Vec::new();
+        let mut new_description = String::new();
+
+        for (i, member) in self.members.iter().enumerate() {
+            if let DisputeMember::Test(test) = member {
+                let button_style = match i % 3 {
+                    0 => ButtonStyle::Primary,
+                    1 => ButtonStyle::Danger,
+                    2 => ButtonStyle::Success,
+                    _ => unreachable!(),
+                };
+
+                let (new_section, new_button) = test
+                    .new_section_and_button(
+                        bot,
+                        f!("{joined_lead_args} {} {i}", self.tag),
+                        button_style,
+                    )
+                    .await?;
+
+                new_description.push_str(&new_section);
+                new_buttons.push(new_button);
+            }
+        }
+
+        let new_embed = CreateEmbed::new()
+            .author(CreateEmbedAuthor::new(self.title.clone())
+                .icon_url("https://media.discordapp.net/attachments/1161050052538675200/1264433422344917086/dice.png?ex=669ddae3&is=669c8963&hm=67ac368580845b5828f46f56bc0337365d616712e093620e9b68a9ced24e3e63&=&format=webp&quality=lossless&width=412&height=473")
+            )
+            .description(new_description);
+
+        Ok(ResponseBlueprint::default()
+            .add_embed(new_embed)
+            .add_buttons(new_buttons))
+    }
+}
+impl Reflective for Dispute {
+    const FOLDER_PATH: &'static str = "./database/disputes";
+    fn get_tag(&self) -> &str {
+        self.tag.as_ref()
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub enum DisputeMember {
+    Test(Test),
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Test {
+    pub id_tag: FixedString,
+    pub test_kind: TestKind,
+    pub dice_bonus: i64,
+    pub side_bonus: i64,
+    pub advantage_bonus: i64,
+    pub evaluation: Option<(i64, RollSummary)>,
+}
+impl Test {
+    pub fn new(id_tag: impl AsRef<str>, test_kind: TestKind) -> Self {
+        Self {
+            id_tag: FixedString::from_str_trunc(id_tag.as_ref()),
+            test_kind,
+            dice_bonus: 0,
+            side_bonus: 0,
+            advantage_bonus: 0,
+            evaluation: None,
+        }
+    }
+    pub fn set_dice_bonus(mut self, dice_bonus: i64) -> Self {
+        self.dice_bonus = dice_bonus;
+        self
+    }
+    pub fn set_side_bonus(mut self, side_bonus: i64) -> Self {
+        self.side_bonus = side_bonus;
+        self
+    }
+    pub fn set_advantage_bonus(mut self, advantage_bonus: i64) -> Self {
+        self.advantage_bonus = advantage_bonus;
+        self
+    }
+}
+impl Test {
+    pub async fn get_roll_expression<'a>(&self, bot: &impl AsBot) -> Result<RollExpression> {
+        let id_m = Mirror::<Id>::get(bot, &self.id_tag).await?;
+        let id = id_m.read().await;
+
+        let mut roll_expression = match self.test_kind {
+            TestKind::AccuracyTest => RollExpression::new(1, id.dexterity, 0),
+            TestKind::EvasionTest => RollExpression::new(1, id.dexterity, 0),
+        };
+        roll_expression.dices += self.dice_bonus;
+        roll_expression.sides += self.side_bonus;
+        roll_expression.advantage += self.advantage_bonus;
+
+        Ok(roll_expression)
+    }
+    pub async fn new_section_and_button<'a>(
+        &self,
+        bot: &impl AsBot,
+        button_custom_id: impl Into<Cow<'a, str>>,
+        button_style: ButtonStyle,
+    ) -> Result<(String, CreateButton<'a>)> {
+        let mut new_section = f!("### {}\n> ", self.test_kind);
+
+        let mut new_button = CreateButton::new(button_custom_id).style(button_style);
+
+        let id_m = Mirror::<Id>::get(bot, &self.id_tag).await?;
+        let id = id_m.read().await;
+
+        if let Some(emoji) = &id.emoji {
+            new_section += emoji;
+            new_button = new_button.emoji(ReactionType::Unicode(emoji.parse()?));
+        } else {
+            match button_style {
+                ButtonStyle::Primary => {
+                    new_section += "🔵";
+                    new_button = new_button.emoji(ReactionType::Unicode("🔵".parse()?));
+                }
+                ButtonStyle::Danger => {
+                    new_section += "🔴";
+                    new_button = new_button.emoji(ReactionType::Unicode("🔴".parse()?));
+                }
+                ButtonStyle::Success => {
+                    new_section += "🟢";
+                    new_button = new_button.emoji(ReactionType::Unicode("🟢".parse()?));
+                }
+                _ => unreachable!(),
+            };
+        }
+        new_section += &f!("**{}**", id.name);
+
+        mem::drop(id);
+
+        let roll_expression = self.get_roll_expression(bot).await?;
+
+        new_section += &f!(
+            " `{}`\n> {}d{} 🎉 {}\n",
+            self.id_tag,
+            roll_expression.dices,
+            roll_expression.sides,
+            roll_expression.advantage
+        );
+
+        if let Some((outcome, roll_summary)) = &self.evaluation {
+            new_section += &f!(
+                "> # {}\n{}\n",
+                outcome,
+                roll_summary.ansi_code_block_in_block_quote()
+            );
+        } else {
+            new_section += "> ```Aguardando interação...```\n";
+        }
+
+        if self.evaluation.is_some() {
+            new_button = new_button.disabled(true);
+        }
+
+        Ok((new_section, new_button))
+    }
+    pub async fn evaluate(&mut self, bot: &impl AsBot) -> Result<()> {
+        let roll_expression = self.get_roll_expression(bot).await?;
+        self.evaluation = Some(roll_expression.evaluate());
+        Ok(())
+    }
+}
+
+#[derive(Deserialize, Serialize)]
 pub enum TestKind {
     AccuracyTest,
     EvasionTest,
@@ -10,266 +233,5 @@ impl Display for TestKind {
             TestKind::AccuracyTest => write!(f, "Teste de Precisão"),
             TestKind::EvasionTest => write!(f, "Teste de Evasão"),
         }
-    }
-}
-
-pub struct CreateDispute<'a> {
-    pub custom_id_part: Cow<'a, str>,
-    pub title: Cow<'a, str>,
-    pub first_member: Option<CreateDisputeMember<'a>>,
-    pub second_member: Option<CreateDisputeMember<'a>>,
-    pub third_member: Option<CreateDisputeMember<'a>>,
-    pub security_key: i64,
-}
-
-impl<'a> CreateDispute<'a> {
-    pub fn new(
-        custom_id_part: impl Into<Cow<'a, str>>,
-        title: impl Into<Cow<'a, str>>,
-        security_key: i64,
-    ) -> Self {
-        Self {
-            custom_id_part: custom_id_part.into(),
-            title: title.into(),
-            first_member: None,
-            second_member: None,
-            third_member: None,
-            security_key,
-        }
-    }
-    pub fn add_member(mut self, member: CreateDisputeMember<'a>) -> Self {
-        if self.first_member.is_none() {
-            self.first_member = Some(member);
-        } else if self.second_member.is_none() {
-            self.second_member = Some(member);
-        } else if self.third_member.is_none() {
-            self.third_member = Some(member);
-        }
-
-        self
-    }
-}
-impl<'a> CreateDispute<'a> {
-    pub fn create(self) -> ResponseBlueprint<'a> {
-        let mut new_buttons = Vec::new();
-        let mut new_description = String::new();
-
-        if let Some(first_member) = self.first_member {
-            new_description += &f!(
-                "### {}\n> 🟦 **{}** `{}`\n> {}d{} 🎉 {}\n> ```Aguardando interação...```",
-                first_member.test_kind,
-                first_member.id_name,
-                first_member.id_tag,
-                first_member.dices,
-                first_member.sides,
-                first_member.advantage
-            );
-
-            new_buttons.push(
-                CreateButton::new(f!("{} {} 0", self.custom_id_part, self.security_key))
-                    .emoji(ReactionType::Unicode("🎲".parse().unwrap())),
-            )
-        }
-
-        if let Some(second_member) = self.second_member {
-            new_description += &f!(
-                "\n### {}\n> 🟥 **{}** `{}`\n> {}d{} 🎉 {}\n> ```Aguardando interação...```",
-                second_member.test_kind,
-                second_member.id_name,
-                second_member.id_tag,
-                second_member.dices,
-                second_member.sides,
-                second_member.advantage
-            );
-
-            new_buttons.push(
-                CreateButton::new(f!("{} {} 1", self.custom_id_part, self.security_key))
-                    .emoji(ReactionType::Unicode("🎲".parse().unwrap()))
-                    .style(ButtonStyle::Danger),
-            )
-        }
-
-        if let Some(third_member) = self.third_member {
-            new_description += &f!(
-                "\n### {}\n> 🟩 **{}** `{}`\n> {}d{} 🎉 {}\n> ```Aguardando interação...```",
-                third_member.test_kind,
-                third_member.id_name,
-                third_member.id_tag,
-                third_member.dices,
-                third_member.sides,
-                third_member.advantage
-            );
-
-            new_buttons.push(
-                CreateButton::new(f!("{} {} 2", self.custom_id_part, self.security_key))
-                    .emoji(ReactionType::Unicode("🎲".parse().unwrap()))
-                    .style(ButtonStyle::Success),
-            )
-        }
-
-        let new_embed = CreateEmbed::new()
-            .author(CreateEmbedAuthor::new(self.title)
-                .icon_url("https://media.discordapp.net/attachments/1161050052538675200/1264433422344917086/dice.png?ex=669ddae3&is=669c8963&hm=67ac368580845b5828f46f56bc0337365d616712e093620e9b68a9ced24e3e63&=&format=webp&quality=lossless&width=412&height=473")
-            )
-            .description(new_description);
-
-        ResponseBlueprint::default()
-            .add_embed(new_embed)
-            .set_components(vec![CreateActionRow::Buttons(new_buttons)])
-    }
-}
-
-pub struct CreateDisputeMember<'a> {
-    pub test_kind: TestKind,
-    pub id_tag: Cow<'a, str>,
-    pub id_name: Cow<'a, str>,
-    pub dices: i64,
-    pub sides: i64,
-    pub advantage: i64,
-}
-impl<'a> CreateDisputeMember<'a> {
-    pub fn new(
-        test_kind: TestKind,
-        id_tag: impl Into<Cow<'a, str>>,
-        id_name: impl Into<Cow<'a, str>>,
-    ) -> Self {
-        Self {
-            test_kind,
-            id_tag: id_tag.into(),
-            id_name: id_name.into(),
-            dices: 1,
-            sides: 20,
-            advantage: 0,
-        }
-    }
-    pub fn set_dices(mut self, dices: i64) -> Self {
-        self.dices = dices;
-        self
-    }
-    pub fn set_sides(mut self, sides: i64) -> Self {
-        self.sides = sides;
-        self
-    }
-    pub fn set_advantage(mut self, advantage: i64) -> Self {
-        self.advantage = advantage;
-        self
-    }
-}
-
-pub struct Dispute<'a> {
-    pub embed: &'a Embed,
-    pub buttons: Vec<&'a Button>,
-}
-impl<'a> Dispute<'a> {
-    pub fn from_message(msg: &'a Message) -> Self {
-        let embed = msg.embeds.first().unwrap();
-
-        let buttons = msg
-            .components
-            .first()
-            .unwrap()
-            .components
-            .iter()
-            .filter_map(|component| {
-                if let ActionRowComponent::Button(button) = component {
-                    Some(button)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<&Button>>();
-
-        Self { embed, buttons }
-    }
-    pub fn are_all_other_buttons_disabled(&self, button_column: usize) -> bool {
-        self.buttons
-            .iter()
-            .take(button_column)
-            .all(|button| button.disabled)
-            && self
-                .buttons
-                .iter()
-                .skip(button_column + 1)
-                .all(|button| button.disabled)
-    }
-    pub fn outcomes(&self) -> Vec<Option<i64>> {
-        self.buttons
-            .iter()
-            .map(|button| {
-                button
-                    .label
-                    .as_ref()
-                    .and_then(|label| label.parse::<i64>().ok())
-            })
-            .collect::<Vec<_>>()
-    }
-    pub fn create_response_after_button_press(
-        &self,
-        button_column: usize,
-        outcome: i64,
-        summary: RollSummary,
-    ) -> ResponseBlueprint<'a> {
-        let embed_author = self.embed.author.as_ref().unwrap();
-
-        let mut description_sections: Vec<_> = self
-            .embed
-            .description
-            .as_ref()
-            .unwrap()
-            .split("\n###")
-            .map(|section| section.to_string())
-            .collect();
-
-        let mut corresponding_section_lines = description_sections
-            .get_mut(button_column)
-            .unwrap()
-            .split('\n')
-            .map(|line| line.to_string())
-            .collect::<Vec<_>>();
-
-        let new_line = f!(
-            "> # {outcome}\n{}",
-            summary.ansi_code_block_in_block_quote()
-        );
-
-        *corresponding_section_lines.last_mut().unwrap() = new_line;
-        description_sections[button_column] = corresponding_section_lines.join("\n");
-
-        let new_description = description_sections.join("\n###");
-
-        let new_embed = CreateEmbed::new()
-            .author(
-                CreateEmbedAuthor::new(embed_author.name.clone())
-                    .icon_url(embed_author.icon_url.as_ref().unwrap().clone()),
-            )
-            .description(new_description);
-
-        let new_buttons = self
-            .buttons
-            .iter()
-            .take(button_column)
-            .map(|button| al_azif_utils::serenity::copy_button(button))
-            .chain(iter::once(
-                al_azif_utils::serenity::copy_button(
-                    self.buttons.get(button_column).unwrap_or_else(|| {
-                        unreachable!(
-                            "Missing button of index {button_column} on roll event button press"
-                        )
-                    }),
-                )
-                .disabled(true)
-                .label(outcome.to_string()),
-            ))
-            .chain(
-                self.buttons
-                    .iter()
-                    .skip(button_column + 1)
-                    .map(|button| al_azif_utils::serenity::copy_button(button)),
-            )
-            .collect::<Vec<_>>();
-
-        ResponseBlueprint::default()
-            .set_embeds(vec![new_embed])
-            .set_components(vec![CreateActionRow::Buttons(new_buttons)])
     }
 }

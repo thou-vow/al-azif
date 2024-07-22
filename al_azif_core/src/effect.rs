@@ -4,7 +4,7 @@ use crate::_prelude::*;
 pub enum Effect {
     Block,
     Rise {
-        might_increase: i64,
+        might_bonus: i64,
         turn_duration: i64,
     },
 }
