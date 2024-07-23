@@ -11,7 +11,7 @@ pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Response
     };
     let mut battle = battle_m.write().await;
 
-    let Moment::AttackPrimary {
+    let Moment::PrimaryAction {
         primary_action_tag,
         attacker_tag,
         target_tag,

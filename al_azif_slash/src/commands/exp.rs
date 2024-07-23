@@ -1,17 +1,70 @@
 use crate::_prelude::*;
 
+pub const NAME: &str = "exp";
+pub const DESCRIPTION: &str = "About experience";
+pub const NAME_LOCALIZED: &str = "exp";
+pub const DESCRIPTION_LOCALIZED: &str = "Sobre experiência";
+
+pub enum SubCommand<'a> {
+    Bestow { args: &'a [ResolvedOption<'a>] },
+}
+impl<'a> SubCommand<'a> {
+    pub fn from_args(args: &'a [ResolvedOption<'a>]) -> Option<Self> {
+        use ResolvedOption as RO;
+        use ResolvedValue as RV;
+
+        match args {
+            [RO {
+                name: bestow::NAME,
+                value: RV::SubCommand(sub_args),
+                ..
+            }, ..] => Some(Self::Bestow { args: sub_args }),
+            _ => None,
+        }
+    }
+    pub fn all() -> [Self; 1] {
+        [Self::Bestow { args: &[] }]
+    }
+    pub fn all_localized_order() -> [Self; 1] {
+        let mut all = SubCommand::all();
+        all.sort_by(|a, b| a.get_name_localized().cmp(b.get_name_localized()));
+        all
+    }
+}
+impl<'a> SubCommand<'a> {
+    pub fn get_name_localized(&self) -> &'static str {
+        match self {
+            Self::Bestow { .. } => bestow::NAME_LOCALIZED,
+        }
+    }
+    pub fn get_description_localized(&self) -> &'static str {
+        match self {
+            Self::Bestow { .. } => bestow::DESCRIPTION_LOCALIZED,
+        }
+    }
+    pub async fn run(
+        &self,
+        bot: &impl AsBot,
+    ) -> Result<Responses<'a>> {
+        match self {
+            Self::Bestow { args } => bestow::run(bot, args).await,
+        }
+    }
+}
+
 pub fn register() -> CreateCommand<'static> {
-    CreateCommand::new("exp")
-        .description("About experience")
+    CreateCommand::new(NAME)
+        .description(DESCRIPTION)
+        .name_localized("pt-BR", NAME_LOCALIZED)
         .description_localized("pt-BR", "Sobre experiência")
         .add_option(
             CreateCommandOption::new(
                 CommandOptionType::SubCommand,
-                "bestow",
-                "Grant experience to the specified Ids",
+                bestow::NAME,
+                bestow::DESCRIPTION,
             )
-            .name_localized("pt-BR", "conceder")
-            .description_localized("pt-BR", "Conceder experiência para os Ids especificados")
+            .name_localized("pt-BR", bestow::NAME_LOCALIZED)
+            .description_localized("pt-BR", bestow::DESCRIPTION_LOCALIZED)
             .add_sub_option(
                 CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to bestow")
                     .name_localized("pt-BR", "ids")
@@ -27,25 +80,15 @@ pub fn register() -> CreateCommand<'static> {
         )
 }
 
-pub async fn run_command<'a>(
-    bot: &impl AsBot,
-    _slash: &CommandInteraction,
-    args: &[ResolvedOption<'_>],
-) -> Result<Responses<'a>> {
-    let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
-        unreachable!("The first argument of the 'exp' command must be a subcommand!");
-    };
-
-    match args[0].name {
-        "bestow" => bestow::run_command(bot, inner_args).await,
-        invalid => unreachable!("Invalid command branch for 'exp' command: {invalid}"),
-    }
-}
-
 mod bestow {
     use super::*;
 
-    pub async fn run_command<'a>(
+    pub const NAME: &str = "bestow";
+    pub const DESCRIPTION: &str = "Grant experience to the specified Ids";
+    pub const NAME_LOCALIZED: &str = "conceder";
+    pub const DESCRIPTION_LOCALIZED: &str = "Conceder experiência para os Ids especificados";
+
+    pub async fn run<'a>(
         bot: &impl AsBot,
         args: &[ResolvedOption<'_>],
     ) -> Result<Vec<Response<'a>>> {

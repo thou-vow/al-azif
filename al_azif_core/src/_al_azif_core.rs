@@ -1,9 +1,9 @@
 pub mod _prelude;
 pub mod battle;
 pub mod bot;
+pub mod component_args;
 pub mod constants;
 pub mod database;
-pub mod dispute;
 pub mod effect;
 pub mod id;
 pub mod mirror;

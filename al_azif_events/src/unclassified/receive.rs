@@ -12,7 +12,7 @@ pub async fn run_component<'a>(
 
     let mut battle = battle_m.write().await;
 
-    let Moment::AttackPrimary {
+    let Moment::PrimaryAction {
         primary_action_tag,
         attacker_tag,
         target_tag,

@@ -4,29 +4,10 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction) -
     let mut args = comp.data.custom_id.split(' ');
 
     match args.next().unwrap() {
-        "prefix" => run_prefix(bot, ctx, comp, &args.collect::<Vec<&str>>()).await,
-        "slash" => run_slash(bot, ctx, comp, &args.collect::<Vec<&str>>()).await,
+        "#slash" => run_slash(bot, ctx, comp, &args.collect::<Vec<&str>>()).await,
         "unclassified" => run_unclassified(bot, ctx, comp, &args.collect::<Vec<&str>>()).await,
         invalid => unreachable!("Unknown component args[0]: {invalid}"),
     }
-}
-
-pub async fn run_prefix(
-    bot: &impl AsBot,
-    ctx: &Context,
-    comp: &ComponentInteraction,
-    args: &[&str],
-) -> Result<()> {
-    use al_azif_prefix::commands::*;
-
-    let execution_result = match args[0] {
-        "dodge" => dodge::run_component(bot, comp, &args[1..]).await,
-        _ => return Ok(()),
-    };
-
-    let responses = execution_result?;
-
-    perform_response_responses(ctx, comp, responses).await
 }
 
 pub async fn run_slash(

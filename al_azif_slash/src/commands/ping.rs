@@ -1,8 +1,11 @@
-use std::vec;
-
 use crate::_prelude::*;
 
-pub async fn run_command<'a>(
+pub const NAME: &str = "ping";
+pub const DESCRIPTION: &str = "Pong!";
+pub const NAME_LOCALIZED: &str = "ping";
+pub const DESCRIPTION_LOCALIZED: &str = "Pong!";
+
+pub async fn run<'a>(
     ctx: &Context,
     slash: &CommandInteraction,
 ) -> Result<Vec<Response<'a>>> {

@@ -1,70 +1,125 @@
 use crate::_prelude::*;
 
-pub fn register() -> CreateCommand<'static> {
-    CreateCommand::new("battle")
-        .description("About battle")
-        .name_localized("pt-BR", "batalha")
-        .description_localized("pt-BR", "Sobre batalha")
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "end",
-                "End the battle within this channel",
-            )
-            .name_localized("pt-BR", "terminar")
-            .description_localized("pt-BR", "Encerrar a batalha deste canal"),
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "join",
-                "Join Ids to the battle",
-            )
-            .name_localized("pt-BR", "participar")
-            .description_localized("pt-BR", "Integrar Ids na batalha")
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to join")
-                    .description_localized("pt-BR", "Os Ids para ingressar")
-                    .required(true),
-            ),
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "start",
-                "Start a battle within this channel",
-            )
-            .name_localized("pt-BR", "iniciar")
-            .description_localized("pt-BR", "Iniciar uma batalha neste canal")
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to join")
-                    .description_localized("pt-BR", "Os Ids para ingressar")
-                    .required(true),
-            ),
-        )
+pub const NAME: &str = "battle";
+pub const DESCRIPTION: &str = "About battle";
+pub const NAME_LOCALIZED: &str = "batalha";
+pub const DESCRIPTION_LOCALIZED: &str = "Sobre batalha";
+
+pub enum SubCommand<'a> {
+    End,
+    Join { args: &'a [ResolvedOption<'a>] },
+    Start { args: &'a [ResolvedOption<'a>] },
+}
+impl<'a> SubCommand<'a> {
+    pub fn from_args(args: &'a [ResolvedOption<'a>]) -> Option<Self> {
+        use ResolvedOption as RO;
+        use ResolvedValue as RV;
+
+        match args {
+            [RO { name: end::NAME, .. }, ..] => Some(Self::End),
+            [RO {
+                name: join::NAME,
+                value: RV::SubCommand(sub_args),
+                ..
+            }, ..] => Some(Self::Join { args: sub_args }),
+            [RO {
+                name: start::NAME,
+                value: RV::SubCommand(sub_args),
+                ..
+            }, ..] => Some(Self::Start { args: sub_args }),
+            _ => None,
+        }
+    }
+    pub fn all() -> [Self; 3] {
+        [Self::End, Self::Join { args: &[] }, Self::Start { args: &[] }]
+    }
+    pub fn all_localized_order() -> [Self; 3] {
+        let mut all = SubCommand::all();
+        all.sort_by(|a, b| a.get_name_localized().cmp(b.get_name_localized()));
+        all
+    }
+}
+impl<'a> SubCommand<'a> {
+    pub fn get_name_localized(&self) -> &'static str {
+        match self {
+            Self::End => end::NAME_LOCALIZED,
+            Self::Join { .. } => join::NAME_LOCALIZED,
+            Self::Start { .. } => start::NAME_LOCALIZED,
+        }
+    }
+    pub fn get_description_localized(&self) -> &'static str {
+        match self {
+            Self::End => end::DESCRIPTION_LOCALIZED,
+            Self::Join { .. } => join::DESCRIPTION_LOCALIZED,
+            Self::Start { .. } => start::DESCRIPTION_LOCALIZED,
+        }
+    }
+    pub async fn run(
+        &self,
+        bot: &impl AsBot,
+        slash: &CommandInteraction,
+    ) -> Result<Responses<'a>> {
+        match self {
+            Self::End => end::run(bot, slash).await,
+            Self::Join { args } => join::run(bot, slash, args).await,
+            Self::Start { args } => start::run(bot, slash, args).await,
+        }
+    }
 }
 
-pub async fn run_command<'a>(
-    bot: &impl AsBot,
-    slash: &CommandInteraction,
-    args: &[ResolvedOption<'_>],
-) -> Result<Responses<'a>> {
-    let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
-        unreachable!("The first argument of the 'id' command must be a subcommand!");
-    };
-
-    match args[0].name {
-        "end" => end::run_command(bot, slash).await,
-        "join" => join::run_command(bot, slash, inner_args).await,
-        "start" => start::run_command(bot, slash, inner_args).await,
-        invalid => unreachable!("Invalid command branch for 'id' command: {invalid}"),
-    }
+pub fn register() -> CreateCommand<'static> {
+    CreateCommand::new(NAME)
+        .description(DESCRIPTION)
+        .name_localized("pt-BR", NAME_LOCALIZED)
+        .description_localized("pt-BR", DESCRIPTION_LOCALIZED)
+        .add_option(
+            CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                end::NAME,
+                end::DESCRIPTION,
+            )
+            .name_localized("pt-BR", end::NAME_LOCALIZED)
+            .description_localized("pt-BR", end::DESCRIPTION_LOCALIZED),
+        )
+        .add_option(
+            CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                join::NAME,
+                join::DESCRIPTION,
+            )
+            .name_localized("pt-BR", join::NAME_LOCALIZED)
+            .description_localized("pt-BR", join::DESCRIPTION_LOCALIZED)
+            .add_sub_option(
+                CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to join")
+                    .description_localized("pt-BR", "Os Ids para ingressar")
+                    .required(true),
+            ),
+        )
+        .add_option(
+            CreateCommandOption::new(
+                CommandOptionType::SubCommand,
+                start::NAME,
+                start::DESCRIPTION,
+            )
+            .name_localized("pt-BR", start::NAME_LOCALIZED)
+            .description_localized("pt-BR", start::DESCRIPTION_LOCALIZED)
+            .add_sub_option(
+                CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to join")
+                    .description_localized("pt-BR", "Os Ids para ingressar")
+                    .required(true),
+            ),
+        )
 }
 
 mod end {
     use super::*;
 
-    pub async fn run_command<'a>(
+    pub const NAME: &str = "end";
+    pub const DESCRIPTION: &str = "End the battle";
+    pub const NAME_LOCALIZED: &str = "terminar";
+    pub const DESCRIPTION_LOCALIZED: &str = "Encerrar a batalha";
+
+    pub async fn run<'a>(
         bot: &impl AsBot,
         slash: &CommandInteraction,
     ) -> Result<Responses<'a>> {
@@ -89,7 +144,12 @@ mod end {
 mod join {
     use super::*;
 
-    pub async fn run_command<'a>(
+    pub const NAME: &str = "join";
+    pub const DESCRIPTION: &str = "Join Ids to the battle";
+    pub const NAME_LOCALIZED: &str = "participar";
+    pub const DESCRIPTION_LOCALIZED: &str = "Integrar Ids na batalha";
+
+    pub async fn run<'a>(
         bot: &impl AsBot,
         slash: &CommandInteraction,
         args: &[ResolvedOption<'_>],
@@ -189,7 +249,12 @@ mod join {
 mod start {
     use super::*;
 
-    pub async fn run_command<'a>(
+    pub const NAME: &str = "start";
+    pub const DESCRIPTION: &str = "Start a battle";
+    pub const NAME_LOCALIZED: &str = "iniciar";
+    pub const DESCRIPTION_LOCALIZED: &str = "Iniciar uma batalha";
+
+    pub async fn run<'a>(
         bot: &impl AsBot,
         slash: &CommandInteraction,
         args: &[ResolvedOption<'_>],

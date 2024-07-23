@@ -11,7 +11,6 @@ pub async fn run_command(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Resu
             attack::run_command(bot, msg, &args.collect::<Vec<&str>>()).await
         }
         name if block::ALIASES.contains(&name) => block::run_command(bot, msg).await,
-        name if dodge::ALIASES.contains(&name) => dodge::run_command(bot, msg).await,
         name if rise::ALIASES.contains(&name) => rise::run_command(bot, msg).await,
         _ => return Ok(()),
     };

@@ -58,12 +58,11 @@ pub async fn run_command<'a>(
         security_key,
     )?);
 
-    battle.current_moment = Moment::AttackPrimary {
+    battle.current_moment = Moment::PrimaryAction {
         primary_action_tag: FixedString::from_static_trunc(TAG),
         attacker_tag: attacker.tag.clone(),
         target_tag: FixedString::from_str_trunc(target_tag),
         security_key,
-        dispute: None,
     };
 
     Ok(vec![Response::send(blueprints)])

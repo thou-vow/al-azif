@@ -1,11 +1,10 @@
 use crate::_prelude::*;
-use al_azif_slash::commands::*;
 
 pub async fn register_commands(bot: &impl AsBot, ctx: &Context) -> Result<()> {
     bot.get_main_guild()
         .set_commands(
             &ctx.http,
-            &[battle::register(), exp::register(), id::register()],
+            &SlashCommand::registers(),
         )
         .await?;
 
@@ -17,13 +16,13 @@ pub async fn run_command(
     ctx: &Context,
     slash: &CommandInteraction,
 ) -> Result<()> {
-    let execution_result = match slash.data.name.as_str() {
-        "battle" => battle::run_command(bot, slash, &slash.data.options()).await,
-        "exp" => exp::run_command(bot, slash, &slash.data.options()).await,
-        "id" => id::run_command(bot, slash, &slash.data.options()).await,
-        "ping" => ping::run_command(ctx, slash).await,
-        _ => return Ok(()),
+    let args = slash.data.options();
+
+    let Some(cmd) = SlashCommand::from_name_and_args(slash.data.name.as_str(), &args) else {
+        return Ok(());
     };
+    
+    let execution_result = cmd.run(bot, ctx, slash).await;
 
     let responses = execution_result?;
 

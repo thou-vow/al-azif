@@ -1,41 +1,76 @@
 use crate::_prelude::*;
 
+pub const NAME: &str = "id";
+pub const DESCRIPTION: &str = "About Id";
+pub const NAME_LOCALIZED: &str = "id";
+pub const DESCRIPTION_LOCALIZED: &str = "Sobre Id";
+
+pub enum SubCommand<'a> {
+    Distribute { args: &'a [ResolvedOption<'a>] },
+}
+impl<'a> SubCommand<'a> {
+    pub fn from_args(args: &'a [ResolvedOption<'a>]) -> Option<Self> {
+        use ResolvedOption as RO;
+        use ResolvedValue as RV;
+
+        match args {
+            [RO {
+                name: distribute::NAME,
+                value: RV::SubCommand(sub_args),
+                ..
+            }, ..] => Some(Self::Distribute { args: sub_args }),
+            _ => None,
+        }
+    }
+    pub fn all() -> [Self; 1] {
+        [Self::Distribute { args: &[] }]
+    }
+    pub fn all_localized_order() -> [Self; 1] {
+        let mut all = SubCommand::all();
+        all.sort_by(|a, b| a.get_name_localized().cmp(b.get_name_localized()));
+        all
+    }
+}
+impl<'a> SubCommand<'a> {
+    pub fn get_name_localized(&self) -> &'static str {
+        match self {
+            Self::Distribute { .. } => distribute::NAME_LOCALIZED,
+        }
+    }
+    pub fn get_description_localized(&self) -> &'static str {
+        match self {
+            Self::Distribute { .. } => distribute::DESCRIPTION_LOCALIZED,
+        }
+    }
+    pub async fn run(
+        &self,
+        bot: &impl AsBot,
+    ) -> Result<Responses<'a>> {
+        match self {
+            Self::Distribute { args } => distribute::run(bot, args).await,
+        }
+    }
+}
+
 pub fn register() -> CreateCommand<'static> {
-    CreateCommand::new("id")
-        .description("About the existing Ids")
-        .description_localized("pt-BR", "Sobre os Ids existentes")
+    CreateCommand::new(NAME)
+        .description(DESCRIPTION)
+        .name_localized("pt-BR", NAME_LOCALIZED)
+        .description_localized("pt-BR", DESCRIPTION_LOCALIZED)
         .add_option(
             CreateCommandOption::new(
                 CommandOptionType::SubCommand,
-                "distribute",
-                "Distribute points to the attributes of the specified Id",
+                distribute::NAME,
+                distribute::DESCRIPTION,
             )
-            .name_localized("pt-BR", "distribuir")
-            .description_localized(
-                "pt-BR",
-                "Distribuir pontos para os atributos do Id especificado",
-            )
+            .name_localized("pt-BR", distribute::NAME_LOCALIZED)
+            .description_localized("pt-BR", distribute::DESCRIPTION_LOCALIZED)
             .add_sub_option(
                 CreateCommandOption::new(CommandOptionType::String, "id", "The Id to distribute")
                     .description_localized("pt-BR", "O Id para distribuir")
                     .required(true),
             ),
         )
-}
-
-pub async fn run_command<'a>(
-    bot: &impl AsBot,
-    _slash: &CommandInteraction,
-    args: &[ResolvedOption<'_>],
-) -> Result<Responses<'a>> {
-    let ResolvedValue::SubCommand(inner_args) = &args[0].value else {
-        unreachable!("The first argument of the 'id' command must be a subcommand!");
-    };
-
-    match args[0].name {
-        "distribute" => distribute::run_command(bot, inner_args).await,
-        invalid => unreachable!("Invalid command branch for 'id' command: {invalid}"),
-    }
 }
 
 pub async fn run_component<'a>(
@@ -52,10 +87,12 @@ pub async fn run_component<'a>(
 mod distribute {
     use super::*;
 
-    pub async fn run_command<'a>(
-        bot: &impl AsBot,
-        args: &[ResolvedOption<'_>],
-    ) -> Result<Responses<'a>> {
+    pub const NAME: &str = "distribute";
+    pub const DESCRIPTION: &str = "Distribute points to the attributes";
+    pub const NAME_LOCALIZED: &str = "distribuir";
+    pub const DESCRIPTION_LOCALIZED: &str = "Distribuir pontos para os atributos";
+
+    pub async fn run<'a>(bot: &impl AsBot, args: &[ResolvedOption<'_>]) -> Result<Responses<'a>> {
         let ResolvedValue::String(id_tag) = args[0].value else {
             unreachable!("The 'id' argument of the 'id distribute' command must be a string!");
         };
@@ -192,13 +229,14 @@ mod distribute {
         id_tag: &str,
         attribute_str: &str,
     ) -> Result<Vec<CreateActionRow<'a>>> {
-        let custom_button_id_part = f!("slash id distribute {id_tag} invest_in {attribute_str} ");
+        let custom_button_id_lead = f!("#slash id distribute {id_tag} invest_in {attribute_str} ");
 
-        let button_1 = CreateButton::new(f!("{custom_button_id_part}1")).label("+1");
-        let button_4 = CreateButton::new(f!("{custom_button_id_part}4")).label("+4");
-        let button_10 = CreateButton::new(f!("{custom_button_id_part}10")).label("+10");
-        let button_100000 = CreateButton::new(f!("{custom_button_id_part}100000")).label("+100000");
-        let button_go_back = CreateButton::new(f!("slash id distribute {id_tag} goto_attributes"))
+        let button_1 = CreateButton::new(f!("{custom_button_id_lead}1")).label("+1");
+        let button_4 = CreateButton::new(f!("{custom_button_id_lead}4")).label("+4");
+        let button_10 = CreateButton::new(f!("{custom_button_id_lead}10")).label("+10");
+        let button_100000 = CreateButton::new(f!("{custom_button_id_lead}100000")).label("+100000");
+
+        let button_go_back = CreateButton::new(f!("#slash id distribute {id_tag} goto_attributes"))
             .emoji(ReactionType::Unicode(GO_BACK_EMOJI.parse()?));
 
         let row_1 = CreateActionRow::Buttons(vec![
