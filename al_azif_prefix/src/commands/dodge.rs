@@ -17,6 +17,7 @@ pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Response
         primary_action_tag,
         attacker_tag,
         target_tag,
+        dispute: None,
         ..
     } = &battle.current_moment
     else {
@@ -26,36 +27,31 @@ pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Response
     };
 
     let target_m = Mirror::<Id>::get(bot, target_tag).await?;
-    let attacker_m = Mirror::<Id>::get(bot, attacker_tag).await?;
+    let target = target_m.read().await;
 
     let mut blueprints = Vec::new();
-
-    let target = target_m.read().await;
 
     blueprints.extend(generate_preliminary_responses(&target));
 
     let security_key = Timestamp::now().unix_timestamp();
 
-    let dispute = Dispute::new(f!("{battle_tag}-{security_key}"), vec!["prefix", "dodge"])
-        .add_member(
-            DisputeMember::Test(Test::new(target_tag, TestKind::EvasionTest)
-                .set_advantage_bonus(EVASION_BONUS)
-            )
-        )
-        .add_member(
-            DisputeMember::Test(Test::new(target_tag, TestKind::AccuracyTest)
-                .set_advantage_bonus(get_accuracy_bonus_of_attack(primary_action_tag))
-            )
+    let dispute = Dispute::new(security_key.t, vec!["prefix", TAG])
+        .set_title("Desviar")
+        .add_test(Test::new(target_tag, TestKind::EvasionTest).set_advantage_bonus(EVASION_BONUS))
+        .add_test(
+            Test::new(attacker_tag, TestKind::AccuracyTest)
+                .set_advantage_bonus(get_accuracy_bonus_of_attack(primary_action_tag)),
         );
 
+    blueprints.push(dispute.generate_screen(bot).await?);
+    
     battle.current_moment = Moment::AttackReactive {
         primary_action_tag: primary_action_tag.clone(),
         attacker_tag: attacker_tag.clone(),
         target_tag: target_tag.clone(),
         security_key,
+        dispute: Some(dispute),
     };
-
-    blueprints.push(dispute.get_response_blueprint(bot).await?);
 
     Ok(vec![Response::send(blueprints)])
 }
@@ -75,6 +71,8 @@ pub async fn run_component<'a>(
         attacker_tag,
         target_tag,
         security_key,
+        dispute: Some(dispute),
+        ..
     } = &battle.current_moment
     else {
         return Ok(Vec::new());

@@ -3,24 +3,21 @@ use crate::_prelude::*;
 #[derive(Deserialize, Serialize)]
 pub struct Dispute {
     pub tag: FixedString,
-    pub lead_args: Vec<FixedString>,
+    pub button_lead_args: Vec<FixedString>,
     pub title: FixedString,
-    pub members: Vec<DisputeMember>,
+    pub tests: Vec<Test>,
 }
 impl Dispute {
-    pub fn new(tag: impl AsRef<str>, lead_args: Vec<impl AsRef<str>>) -> Self {
+    pub fn new(tag: impl AsRef<str>, button_lead_args: Vec<impl AsRef<str>>) -> Self {
         Self {
             tag: FixedString::from_str_trunc(tag.as_ref()),
-            lead_args: lead_args
-                .iter()
-                .map(|arg| FixedString::from_str_trunc(arg.as_ref()))
-                .collect(),
             title: FixedString::default(),
-            members: Vec::new(),
+            button_lead_args: button_lead_args.iter().map(|arg| FixedString::from_str_trunc(arg.as_ref())).collect(),
+            tests: Vec::new(),
         }
     }
-    pub fn add_member(mut self, member: DisputeMember) -> Self {
-        self.members.push(member);
+    pub fn add_test(mut self, test: Test) -> Self {
+        self.tests.push(test);
         self
     }
     pub fn set_title(mut self, title: impl AsRef<str>) -> Self {
@@ -30,8 +27,8 @@ impl Dispute {
 }
 impl Dispute {
     pub async fn evaluate_test(&mut self, bot: &impl AsBot, index: usize) -> Result<()> {
-        if let Some(DisputeMember::Test(test)) = self.members.get_mut(index) {
-            test.evaluate(bot).await?;
+        if let Some(test) = self.tests.get_mut(index) {
+            test.get_roll_expression(bot).await?;
         }
 
         Ok(())
@@ -39,28 +36,20 @@ impl Dispute {
 }
 impl Dispute {
     pub fn are_all_evaluated(&self) -> bool {
-        self.members
+        self.tests
             .iter()
-            .filter_map(|member| {
-                if let DisputeMember::Test(test) = member {
-                    Some(test)
-                } else {
-                    None
-                }
-            })
             .all(|test| test.evaluation.is_some())
     }
-    pub async fn get_response_blueprint<'a>(
+    pub async fn generate_screen<'a>(
         &self,
         bot: &impl AsBot,
     ) -> Result<ResponseBlueprint<'a>> {
-        let joined_lead_args = self.lead_args.join(" ");
-
         let mut new_buttons = Vec::new();
         let mut new_description = String::new();
 
-        for (i, member) in self.members.iter().enumerate() {
-            if let DisputeMember::Test(test) = member {
+        let joined_lead_args = self.button_lead_args.join(" ");
+
+        for (i, test) in self.tests.iter().enumerate() {
                 let button_style = match i % 3 {
                     0 => ButtonStyle::Primary,
                     1 => ButtonStyle::Danger,
@@ -78,7 +67,6 @@ impl Dispute {
 
                 new_description.push_str(&new_section);
                 new_buttons.push(new_button);
-            }
         }
 
         let new_embed = CreateEmbed::new()
@@ -92,36 +80,25 @@ impl Dispute {
             .add_buttons(new_buttons))
     }
 }
-impl Reflective for Dispute {
-    const FOLDER_PATH: &'static str = "./database/disputes";
-    fn get_tag(&self) -> &str {
-        self.tag.as_ref()
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-pub enum DisputeMember {
-    Test(Test),
-}
 
 #[derive(Deserialize, Serialize)]
 pub struct Test {
-    pub id_tag: FixedString,
     pub test_kind: TestKind,
     pub dice_bonus: i64,
     pub side_bonus: i64,
     pub advantage_bonus: i64,
     pub evaluation: Option<(i64, RollSummary)>,
+    pub button_style: ButtonStyle,
 }
 impl Test {
-    pub fn new(id_tag: impl AsRef<str>, test_kind: TestKind) -> Self {
+    pub fn new(test_kind: TestKind) -> Self {
         Self {
-            id_tag: FixedString::from_str_trunc(id_tag.as_ref()),
             test_kind,
             dice_bonus: 0,
             side_bonus: 0,
             advantage_bonus: 0,
             evaluation: None,
+            button_style: ButtonStyle::Primary,
         }
     }
     pub fn set_dice_bonus(mut self, dice_bonus: i64) -> Self {
@@ -136,10 +113,14 @@ impl Test {
         self.advantage_bonus = advantage_bonus;
         self
     }
+    pub fn set_button_style(mut self, button_style: ButtonStyle) -> Self {
+        self.button_style = button_style;
+        self
+    }
 }
 impl Test {
-    pub async fn get_roll_expression<'a>(&self, bot: &impl AsBot) -> Result<RollExpression> {
-        let id_m = Mirror::<Id>::get(bot, &self.id_tag).await?;
+    pub async fn get_roll_expression<'a>(&self, bot: &impl AsBot, id_tag: impl AsRef<str>) -> Result<RollExpression> {
+        let id_m = Mirror::<Id>::get(bot, id_tag.as_ref()).await?;
         let id = id_m.read().await;
 
         let mut roll_expression = match self.test_kind {
@@ -155,21 +136,22 @@ impl Test {
     pub async fn new_section_and_button<'a>(
         &self,
         bot: &impl AsBot,
+        id_tag: impl AsRef<str>,
         button_custom_id: impl Into<Cow<'a, str>>,
-        button_style: ButtonStyle,
     ) -> Result<(String, CreateButton<'a>)> {
+        let id_tag = id_tag.as_ref();
+
         let mut new_section = f!("### {}\n> ", self.test_kind);
+        let mut new_button = CreateButton::new(button_custom_id).style(self.button_style);
 
-        let mut new_button = CreateButton::new(button_custom_id).style(button_style);
-
-        let id_m = Mirror::<Id>::get(bot, &self.id_tag).await?;
+        let id_m = Mirror::<Id>::get(bot, id_tag).await?;
         let id = id_m.read().await;
 
         if let Some(emoji) = &id.emoji {
             new_section += emoji;
             new_button = new_button.emoji(ReactionType::Unicode(emoji.parse()?));
         } else {
-            match button_style {
+            match self.button_style {
                 ButtonStyle::Primary => {
                     new_section += "🔵";
                     new_button = new_button.emoji(ReactionType::Unicode("🔵".parse()?));
@@ -189,11 +171,11 @@ impl Test {
 
         mem::drop(id);
 
-        let roll_expression = self.get_roll_expression(bot).await?;
+        let roll_expression = self.get_roll_expression(bot, id_tag).await?;
 
         new_section += &f!(
             " `{}`\n> {}d{} 🎉 {}\n",
-            self.id_tag,
+            id_tag,
             roll_expression.dices,
             roll_expression.sides,
             roll_expression.advantage
@@ -214,11 +196,6 @@ impl Test {
         }
 
         Ok((new_section, new_button))
-    }
-    pub async fn evaluate(&mut self, bot: &impl AsBot) -> Result<()> {
-        let roll_expression = self.get_roll_expression(bot).await?;
-        self.evaluation = Some(roll_expression.evaluate());
-        Ok(())
     }
 }
 

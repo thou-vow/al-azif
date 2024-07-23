@@ -4,7 +4,7 @@ pub use crate::{
     constants::*,
     database::{self, Reflective},
     effect::Effect,
-        dispute::{Dispute, DisputeMember, Test, TestKind},
+        dispute::{Dispute, Test, TestKind},
     id::{Age, Gender, Id},
     mirror::{InMemoryStore, Mirror, ReadMirror, WriteMirror},
     player::Player,

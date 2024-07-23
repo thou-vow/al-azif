@@ -1,7 +1,7 @@
 use crate::_prelude::*;
 
 pub trait AsBot:
-    AsRef<InMemoryStore<Battle>> + AsRef<InMemoryStore<Dispute>> + AsRef<InMemoryStore<Id>> + AsRef<InMemoryStore<Player>>
+    AsRef<InMemoryStore<Battle>> + AsRef<InMemoryStore<Id>> + AsRef<InMemoryStore<Player>>
 {
     fn get_cache(&self) -> Arc<InMemoryDatabase>;
     fn get_main_guild(&self) -> &GuildId;
@@ -16,11 +16,6 @@ pub trait AsBot:
 
                 cache
                     .battles
-                    .lock()
-                    .await
-                    .retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
-                cache
-                    .disputes
                     .lock()
                     .await
                     .retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
@@ -42,7 +37,6 @@ pub trait AsBot:
 #[derive(Default)]
 pub struct InMemoryDatabase {
     pub battles: InMemoryStore<Battle>,
-    pub disputes: InMemoryStore<Dispute>,
     pub ids: InMemoryStore<Id>,
     pub players: InMemoryStore<Player>,
 }

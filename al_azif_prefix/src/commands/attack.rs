@@ -63,6 +63,7 @@ pub async fn run_command<'a>(
         attacker_tag: attacker.tag.clone(),
         target_tag: FixedString::from_str_trunc(target_tag),
         security_key,
+        dispute: None,
     };
 
     Ok(vec![Response::send(blueprints)])

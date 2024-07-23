@@ -25,11 +25,13 @@ impl Battle {
             turn_value_cap: 0,
         }
     }
+}
+impl Battle {
     pub async fn generate_turn_screen<'a>(
         &mut self,
         bot: &impl AsBot,
     ) -> Result<ResponseBlueprint<'a>> {
-        let mut desc = String::new();
+        let mut new_desc = String::new();
 
         for (id_tag, opponent) in &mut self.opponents {
             let number_of_filled_squares =
@@ -40,7 +42,7 @@ impl Battle {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
             let id = id_m.read().await;
 
-            desc += &f!(
+            new_desc += &f!(
                 "**{}** `{id_tag}`\n{filled_portion}{empty_portion}  **{}** / **{}**",
                 id.name,
                 mark_thousands(opponent.turn_value),
@@ -48,21 +50,117 @@ impl Battle {
             );
 
             if opponent.last_total_increased_turn_value_amount != 0 {
-                desc += &f!(
+                new_desc += &f!(
                     " *{}*",
                     mark_thousands_and_show_sign(opponent.last_total_increased_turn_value_amount)
                 );
                 opponent.last_total_increased_turn_value_amount = 0;
             }
 
-            desc += "\n\n";
+            new_desc += "\n\n";
         }
 
         let new_embed = CreateEmbed::default()
             .title(f!("Fase {}", self.phase_counter))
-            .description(desc);
+            .description(new_desc);
 
         Ok(ResponseBlueprint::default().set_embeds(vec![new_embed]))
+    }
+    pub async fn generate_dispute_screen<'a>(
+        &mut self,
+        bot: &impl AsBot,
+    ) -> Result<ResponseBlueprint<'a>> {
+        async fn generate_section_and_button<'a>(
+            bot: &impl AsBot,
+            id_tag: &str,
+            button_custom_id: impl Into<Cow<'a, str>>,
+            button_style: ButtonStyle,
+        ) -> Result<(String, CreateButton<'a>)> {
+            let mut new_section = f!("### {}\n> ", self.test_kind);
+            let mut new_button = CreateButton::new(button_custom_id).style(button_style);
+
+            let id_m = Mirror::<Id>::get(bot, id_tag).await?;
+            let id = id_m.read().await;
+
+            if let Some(emoji) = &id.emoji {
+                new_section += emoji;
+                new_button = new_button.emoji(ReactionType::Unicode(emoji.parse()?));
+            } else {
+                match button_style {
+                    ButtonStyle::Primary => {
+                        new_section += "🔵";
+                        new_button = new_button.emoji(ReactionType::Unicode("🔵".parse()?));
+                    }
+                    ButtonStyle::Danger => {
+                        new_section += "🔴";
+                        new_button = new_button.emoji(ReactionType::Unicode("🔴".parse()?));
+                    }
+                    ButtonStyle::Success => {
+                        new_section += "🟢";
+                        new_button = new_button.emoji(ReactionType::Unicode("🟢".parse()?));
+                    }
+                    _ => unreachable!(),
+                };
+            }
+            new_section += &f!("**{}**", id.name);
+    
+            mem::drop(id);
+    
+            let roll_expression = self.get_roll_expression(bot).await?;
+    
+            new_section += &f!(
+                " `{}`\n> {}d{} 🎉 {}\n",
+                self.id_tag,
+                roll_expression.dices,
+                roll_expression.sides,
+                roll_expression.advantage
+            );
+    
+            if let Some((outcome, roll_summary)) = &self.evaluation {
+                new_section += &f!(
+                    "> # {}\n{}\n",
+                    outcome,
+                    roll_summary.ansi_code_block_in_block_quote()
+                );
+            } else {
+                new_section += "> ```Aguardando interação...```\n";
+            }
+    
+            if self.evaluation.is_some() {
+                new_button = new_button.disabled(true);
+            }
+    
+            Ok((new_section, new_button))
+        }
+        let mut new_buttons = Vec::new();
+        let mut new_desc = String::new();
+
+        match self.current_moment {
+            Moment::AttackPrimary {
+                primary_action_tag,
+                attacker_tag,
+                target_tag,
+                security_key,
+                dispute: Some(dispute),
+            } => {
+                let new_embed = CreateEmbed::new()
+                    .author(CreateEmbedAuthor::new(dispute.title.clone())
+                        .icon_url("https://media.discordapp.net/attachments/1161050052538675200/1264433422344917086/dice.png?ex=669ddae3&is=669c8963&hm=67ac368580845b5828f46f56bc0337365d616712e093620e9b68a9ced24e3e63&=&format=webp&quality=lossless&width=412&height=473")
+                    )
+                    .description(new_desc);
+            }
+            Moment::AttackReactive {
+                primary_action_tag,
+                reactive_action_tag,
+                attacker_tag,
+                target_tag,
+                security_key,
+                dispute: Some(dispute),
+            } => (),
+            _ => return Err(anyhow!("No dispute to show a screen for")),
+        }
+
+        todo!()
     }
     fn get_next_turn_owner(&self) -> Option<&str> {
         self.opponents
@@ -113,12 +211,15 @@ pub enum Moment {
         attacker_tag: FixedString,
         target_tag: FixedString,
         security_key: i64,
+        dispute: Option<Dispute>,
     },
     AttackReactive {
         primary_action_tag: FixedString,
+        reactive_action_tag: FixedString,
         attacker_tag: FixedString,
         target_tag: FixedString,
         security_key: i64,
+        dispute: Option<Dispute>,
     },
     Defending,
 }

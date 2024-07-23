@@ -40,11 +40,6 @@ impl AsRef<InMemoryStore<Battle>> for Bot {
         &self.cache.battles
     }
 }
-impl AsRef<InMemoryStore<Dispute>> for Bot {
-    fn as_ref(&self) -> &InMemoryStore<Dispute> {
-        &self.cache.disputes
-    }
-}
 impl AsRef<InMemoryStore<Id>> for Bot {
     fn as_ref(&self) -> &InMemoryStore<Id> {
         &self.cache.ids
