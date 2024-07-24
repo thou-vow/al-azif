@@ -12,12 +12,8 @@ pub async fn run_component<'a>(
 
     let mut battle = battle_m.write().await;
 
-    let Moment::PrimaryAction {
-        primary_action_tag,
-        attacker_tag,
-        target_tag,
-        security_key,
-    } = &battle.current_moment
+    let Moment::PrimaryAction { primary_action_tag, attacker_tag, target_tag, security_key } =
+        &battle.current_moment
     else {
         // Attack didn't start yet (receive action is not available)
         return Ok(Vec::new());
@@ -28,9 +24,7 @@ pub async fn run_component<'a>(
         return Ok(Vec::new());
     }
 
-    let mut responses = vec![Response::update_delayless(
-        request_reaction::disable_button(&comp.message, 0),
-    )];
+    let mut responses = vec![Response::update_delayless(request_reaction::disable_button(&comp.message, 0))];
 
     let mut blueprints = Vec::new();
 
@@ -39,11 +33,7 @@ pub async fn run_component<'a>(
     let attacker_m = Mirror::<Id>::get(bot, &attacker_tag).await?;
     let mut attacker = attacker_m.write().await;
 
-    blueprints.extend(al_azif_prefix::utils::execute_attack(
-        primary_action_tag,
-        &mut attacker,
-        &mut target,
-    ));
+    blueprints.extend(al_azif_prefix::utils::execute_attack(primary_action_tag, &mut attacker, &mut target));
 
     mem::drop(target);
     mem::drop(attacker);

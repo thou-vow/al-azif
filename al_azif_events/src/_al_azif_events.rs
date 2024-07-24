@@ -1,6 +1,6 @@
+pub mod _prelude;
 pub mod component;
 pub mod prefix;
-pub mod _prelude;
 pub mod slash;
 pub mod unclassified {
     pub mod receive;
@@ -12,7 +12,7 @@ pub async fn try_interaction(bot: &impl AsBot, ctx: &Context, intr: &Interaction
     match intr {
         Interaction::Command(slash) => slash::run_command(bot, ctx, slash).await?,
         Interaction::Component(comp) => component::run(bot, ctx, comp).await?,
-        _ => {}
+        _ => {},
     }
 
     Ok(())

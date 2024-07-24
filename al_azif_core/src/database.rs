@@ -13,15 +13,15 @@ pub fn get<T: Reflective>(tag: impl AsRef<str>) -> Result<T> {
 fn _get<T: Reflective>(tag: &str) -> Result<T> {
     let full_path = f!("{}/{tag}.bin", T::FOLDER_PATH);
 
-    let serialized = fs::read(full_path)?;
+    let serialized = fs::read_to_string(full_path)?;
 
-    Ok(bincode::deserialize(&serialized)?)
+    Ok(serde_json::from_str(&serialized)?)
 }
 
 pub fn set<T: Reflective>(value: &T) -> Result<()> {
-    let full_path = f!("{}/{}.bin", T::FOLDER_PATH, value.get_tag());
+    let full_path = f!("{}/{}.json", T::FOLDER_PATH, value.get_tag());
 
-    let serialized = bincode::serialize(value)?;
+    let serialized = serde_json::to_string(value)?;
 
     fs::write(full_path, serialized)?;
 
@@ -34,7 +34,7 @@ pub fn cut<T: Reflective>(tag: impl AsRef<str>) -> Result<()> {
     _cut::<T>(tag)
 }
 fn _cut<T: Reflective>(tag: &str) -> Result<()> {
-    let full_path = f!("{}/{tag}.bin", T::FOLDER_PATH);
+    let full_path = f!("{}/{tag}.json", T::FOLDER_PATH);
 
     fs::remove_file(full_path)?;
 

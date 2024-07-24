@@ -5,71 +5,20 @@ pub const DESCRIPTION: &str = "About Id";
 pub const NAME_LOCALIZED: &str = "id";
 pub const DESCRIPTION_LOCALIZED: &str = "Sobre Id";
 
-pub enum SubCommand<'a> {
-    Distribute { args: &'a [ResolvedOption<'a>] },
-}
-impl<'a> SubCommand<'a> {
-    pub fn from_args(args: &'a [ResolvedOption<'a>]) -> Option<Self> {
-        use ResolvedOption as RO;
-        use ResolvedValue as RV;
-
-        match args {
-            [RO {
-                name: distribute::NAME,
-                value: RV::SubCommand(sub_args),
-                ..
-            }, ..] => Some(Self::Distribute { args: sub_args }),
-            _ => None,
-        }
-    }
-    pub fn all() -> [Self; 1] {
-        [Self::Distribute { args: &[] }]
-    }
-    pub fn all_localized_order() -> [Self; 1] {
-        let mut all = SubCommand::all();
-        all.sort_by(|a, b| a.get_name_localized().cmp(b.get_name_localized()));
-        all
-    }
-}
-impl<'a> SubCommand<'a> {
-    pub fn get_name_localized(&self) -> &'static str {
-        match self {
-            Self::Distribute { .. } => distribute::NAME_LOCALIZED,
-        }
-    }
-    pub fn get_description_localized(&self) -> &'static str {
-        match self {
-            Self::Distribute { .. } => distribute::DESCRIPTION_LOCALIZED,
-        }
-    }
-    pub async fn run(
-        &self,
-        bot: &impl AsBot,
-    ) -> Result<Responses<'a>> {
-        match self {
-            Self::Distribute { args } => distribute::run(bot, args).await,
-        }
-    }
-}
-
 pub fn register() -> CreateCommand<'static> {
     CreateCommand::new(NAME)
         .description(DESCRIPTION)
         .name_localized("pt-BR", NAME_LOCALIZED)
         .description_localized("pt-BR", DESCRIPTION_LOCALIZED)
         .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                distribute::NAME,
-                distribute::DESCRIPTION,
-            )
-            .name_localized("pt-BR", distribute::NAME_LOCALIZED)
-            .description_localized("pt-BR", distribute::DESCRIPTION_LOCALIZED)
-            .add_sub_option(
-                CreateCommandOption::new(CommandOptionType::String, "id", "The Id to distribute")
-                    .description_localized("pt-BR", "O Id para distribuir")
-                    .required(true),
-            ),
+            CreateCommandOption::new(CommandOptionType::SubCommand, distribute::NAME, distribute::DESCRIPTION)
+                .name_localized("pt-BR", distribute::NAME_LOCALIZED)
+                .description_localized("pt-BR", distribute::DESCRIPTION_LOCALIZED)
+                .add_sub_option(
+                    CreateCommandOption::new(CommandOptionType::String, "id", "The Id to distribute")
+                        .description_localized("pt-BR", "O Id para distribuir")
+                        .required(true),
+                ),
         )
 }
 
@@ -79,12 +28,12 @@ pub async fn run_component<'a>(
     args: &[&str],
 ) -> Result<Responses<'a>> {
     match args[0] {
-        "distribute" => distribute::run_component(bot, &args[1..]).await,
+        "distribute" => distribute::run_component(bot, &args[1 ..]).await,
         invalid => unreachable!("Invalid component branch for 'id' components: {invalid}"),
     }
 }
 
-mod distribute {
+pub mod distribute {
     use super::*;
 
     pub const NAME: &str = "distribute";
@@ -104,7 +53,7 @@ mod distribute {
         let new_embed = generate_embed(&id).await?;
         let new_components = generate_attribute_components(&id).await?;
 
-        Ok(vec![Response::send(vec![ResponseBlueprint::default()
+        Ok(vec![Response::send(vec![ResponseBlueprint::new()
             .add_embed(new_embed)
             .set_components(new_components)])])
     }
@@ -117,25 +66,19 @@ mod distribute {
             "invest_in" => {
                 invest(&mut *id_m.write().await, args[2], args[3].parse()?).await?;
                 components = generate_incrementor_components(args[0], args[2]).await?;
-            }
+            },
             "goto_incrementors" => {
                 components = generate_incrementor_components(args[0], args[2]).await?;
-            }
+            },
             "goto_attributes" => {
                 components = generate_attribute_components(&*id_m.read().await).await?;
-            }
-            invalid => unreachable!(
-                "Invalid operation on 'id distribute' component interaction: {invalid}"
-            ),
+            },
+            invalid => unreachable!("Invalid operation on 'id distribute' component interaction: {invalid}"),
         }
 
         let embed = generate_embed(&*id_m.read().await).await?;
 
-        Ok(vec![Response::update(
-            ResponseBlueprint::default()
-                .set_embeds(vec![embed])
-                .set_components(components),
-        )])
+        Ok(vec![Response::update(ResponseBlueprint::new().set_embeds(vec![embed]).set_components(components))])
     }
 
     async fn invest(id: &mut Id, attribute_str: &str, selected_value: i64) -> Result<()> {
@@ -149,9 +92,9 @@ mod distribute {
             "dex" => id.dexterity += spent,
             "cog" => id.cognition += spent,
             "cha" => id.charisma += spent,
-            invalid => unreachable!(
-                "Invalid invested attribute on 'id distribute' component interaction: {invalid}"
-            ),
+            invalid => {
+                unreachable!("Invalid invested attribute on 'id distribute' component interaction: {invalid}")
+            },
         }
 
         id.points_to_distribute -= spent;
@@ -161,37 +104,18 @@ mod distribute {
 
     async fn generate_embed<'a>(id: &Id) -> Result<CreateEmbed<'a>> {
         let mut attributes_field = String::new();
-        attributes_field += &f!(
-            "{CON_EMOJI} `{CON_SHORT}` {}\n",
-            mark_thousands(id.constitution)
-        );
+        attributes_field += &f!("{CON_EMOJI} `{CON_SHORT}` {}\n", mark_thousands(id.constitution));
         attributes_field += &f!("{SPR_EMOJI} `{SPR_SHORT}` {}\n", mark_thousands(id.spirit));
         attributes_field += &f!("{MGT_EMOJI} `{MGT_SHORT}` {}\n", mark_thousands(id.might));
-        attributes_field += &f!(
-            "{MOV_EMOJI} `{MOV_SHORT}` {}\n",
-            mark_thousands(id.movement)
-        );
-        attributes_field += &f!(
-            "{DEX_EMOJI} `{DEX_SHORT}` {}\n",
-            mark_thousands(id.dexterity)
-        );
-        attributes_field += &f!(
-            "{COG_EMOJI} `{COG_SHORT}` {}\n",
-            mark_thousands(id.cognition)
-        );
-        attributes_field += &f!(
-            "{CHA_EMOJI} `{CHA_SHORT}` {}\n",
-            mark_thousands(id.charisma)
-        );
+        attributes_field += &f!("{MOV_EMOJI} `{MOV_SHORT}` {}\n", mark_thousands(id.movement));
+        attributes_field += &f!("{DEX_EMOJI} `{DEX_SHORT}` {}\n", mark_thousands(id.dexterity));
+        attributes_field += &f!("{COG_EMOJI} `{COG_SHORT}` {}\n", mark_thousands(id.cognition));
+        attributes_field += &f!("{CHA_EMOJI} `{CHA_SHORT}` {}\n", mark_thousands(id.charisma));
 
         let new_embed = CreateEmbed::new()
             .title(f!("{} 🎊 [{}]", id.name, mark_thousands(id.lvl)))
             .color(id.color.unwrap_or(0x36393e))
-            .description(f!(
-                "{} / {}",
-                mark_thousands(id.xp),
-                mark_thousands(xp_to_next_level(id.lvl))
-            ))
+            .description(f!("{} / {}", mark_thousands(id.xp), mark_thousands(xp_to_next_level(id.lvl))))
             .field("", attributes_field, false)
             .footer(CreateEmbedFooter::new(f!(
                 "{} pontos para distribuir.",
@@ -239,13 +163,7 @@ mod distribute {
         let button_go_back = CreateButton::new(f!("#slash id distribute {id_tag} goto_attributes"))
             .emoji(ReactionType::Unicode(GO_BACK_EMOJI.parse()?));
 
-        let row_1 = CreateActionRow::Buttons(vec![
-            button_1,
-            button_4,
-            button_10,
-            button_100000,
-            button_go_back,
-        ]);
+        let row_1 = CreateActionRow::Buttons(vec![button_1, button_4, button_10, button_100000, button_go_back]);
 
         Ok(vec![row_1])
     }

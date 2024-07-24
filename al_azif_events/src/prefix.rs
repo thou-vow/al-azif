@@ -2,14 +2,14 @@ use crate::_prelude::*;
 use al_azif_prefix::commands::*;
 
 pub async fn run_command(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Result<()> {
-    let mut args = msg.content[PREFIX.len()..].split_ascii_whitespace();
+    let mut args = msg.content[PREFIX.len() ..].split_ascii_whitespace();
 
     let cmd_name = args.next().unwrap().to_lowercase();
 
     let execution_result = match cmd_name.as_str() {
         name if attack::ALIASES.contains(&name) => {
             attack::run_command(bot, msg, &args.collect::<Vec<&str>>()).await
-        }
+        },
         name if block::ALIASES.contains(&name) => block::run_command(bot, msg).await,
         name if rise::ALIASES.contains(&name) => rise::run_command(bot, msg).await,
         _ => return Ok(()),
@@ -37,18 +37,13 @@ pub async fn perform_response_responses<'a>(
                 };
 
                 msg.channel_id
-                    .send_message(
-                        &ctx.http,
-                        first_blueprint.create_message().reference_message(msg),
-                    )
+                    .send_message(&ctx.http, first_blueprint.create_message().reference_message(msg))
                     .await?;
 
                 for blueprint in blueprints.iter().skip(1) {
-                    msg.channel_id
-                        .send_message(&ctx.http, blueprint.create_message())
-                        .await?;
+                    msg.channel_id.send_message(&ctx.http, blueprint.create_message()).await?;
                 }
-            }
+            },
             Response::SendAndDelete { blueprints } => {
                 let Some(first_blueprint) = blueprints.first() else {
                     continue;
@@ -56,38 +51,25 @@ pub async fn perform_response_responses<'a>(
 
                 msgs_to_delete.push(
                     msg.channel_id
-                        .send_message(
-                            &ctx.http,
-                            first_blueprint.create_message().reference_message(msg),
-                        )
+                        .send_message(&ctx.http, first_blueprint.create_message().reference_message(msg))
                         .await?,
                 );
 
                 for blueprint in blueprints.iter().skip(1) {
-                    msgs_to_delete.push(
-                        msg.channel_id
-                            .send_message(&ctx.http, blueprint.create_message())
-                            .await?,
-                    );
+                    msgs_to_delete.push(msg.channel_id.send_message(&ctx.http, blueprint.create_message()).await?);
                 }
-            }
+            },
             Response::SendEphemeral { .. } => (),
             Response::SendLoose { blueprints } => {
                 for blueprint in blueprints {
-                    msg.channel_id
-                        .send_message(&ctx.http, blueprint.create_message())
-                        .await?;
+                    msg.channel_id.send_message(&ctx.http, blueprint.create_message()).await?;
                 }
-            }
+            },
             Response::SendLooseAndDelete { blueprints } => {
                 for blueprint in blueprints {
-                    msgs_to_delete.push(
-                        msg.channel_id
-                            .send_message(&ctx.http, blueprint.create_message())
-                            .await?,
-                    );
+                    msgs_to_delete.push(msg.channel_id.send_message(&ctx.http, blueprint.create_message()).await?);
                 }
-            }
+            },
             Response::Update { .. } => (),
             Response::UpdateDelayless { .. } => (),
         }

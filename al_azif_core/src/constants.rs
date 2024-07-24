@@ -67,9 +67,7 @@ pub const MEDIUM_EMOJI: &str = "🟡";
 pub const HEAVY_EMOJI: &str = "🔴";
 pub const SEVERE_EMOJI: &str = "⚠️";
 
-pub const fn xp_to_next_level(lvl: i64) -> i64 {
-    ((lvl ^ 2) * 5) + lvl * 50 + 100
-}
+pub const fn xp_to_next_level(lvl: i64) -> i64 { ((lvl ^ 2) * 5) + lvl * 50 + 100 }
 
 pub const PL_LONG: &str = "Nível de Permissão";
 pub const PL_QUARENTINE_LONG: &str = "Quarentena";

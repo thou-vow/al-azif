@@ -14,7 +14,7 @@ fn main() {
     let rt = Runtime::new().unwrap();
 
     if let Err(why) = rt.block_on(try_main()) {
-        error!("Error in main: {why}:?");
+        error!("Error in main: {why:?}");
     }
 }
 
@@ -28,7 +28,7 @@ async fn try_main() -> Result<()> {
 
     let mut client = Client::builder(&config::get_bot_token()?, intents)
         .event_handler(Bot {
-            cache: Arc::new(InMemoryDatabase::default()),
+            cache:      Arc::new(InMemoryDatabase::default()),
             main_guild: config::get_main_guild()?,
         })
         .await?;

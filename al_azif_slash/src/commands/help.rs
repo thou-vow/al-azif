@@ -13,56 +13,51 @@ pub fn register() -> CreateCommand<'static> {
 }
 
 pub async fn run<'a>() -> Result<Vec<Response<'a>>> {
+    Ok(vec![Response::send(vec![ResponseBlueprint::new().add_embed(embed_1())])])
+}
+
+fn embed_1() -> CreateEmbed<'static> {
     use crate::commands::*;
 
-    fn add_line(cmd: &SlashCommand, mut current_section: Vec<String>)  -> Vec<String> {
-        match cmd {
-            SlashCommand::Battle(sub) => {
-                current_section.push(f!("**/{} {}**: {}", cmd.get_name_localized(), sub.get_name_localized(), sub.get_description_localized()))
-            },
-            SlashCommand::Exp(sub) => {
-                current_section.push(f!("**/{} {}**: {}", cmd.get_name_localized(), sub.get_name_localized(), sub.get_description_localized()))
-            }
-            SlashCommand::Help => current_section.push(f!("**/{}**: {}", cmd.get_name_localized(), cmd.get_description_localized())),
-            SlashCommand::Id(sub) => {
-                current_section.push(f!("**/{} {}**: {}", cmd.get_name_localized(), sub.get_name_localized(), sub.get_description_localized()))
-            },
-            SlashCommand::Ping => current_section.push(f!("**/{}**: {}", cmd.get_name_localized(), cmd.get_description_localized())),
-        }
-
-        current_section
-    }
-
-    let all_cmds = SlashCommand::all_localized_order();
-
-    let first_cmd= all_cmds.first().unwrap();
-    let mut current_section = Vec::new();
-    current_section = add_line(first_cmd, current_section);
-
-    let mut prev_cmd_name = first_cmd.get_name();
-    let mut all_sections = Vec::new();
-
-    for cmd in all_cmds.into_iter().skip(1) {
-        if cmd.get_name() != prev_cmd_name {
-            all_sections.push(current_section);
-            current_section = Vec::new();
-            prev_cmd_name = cmd.get_name();
-        }
-        current_section = add_line(&cmd, current_section);
-    }
-    all_sections.push(current_section);
-
-
-    let mut new_embed = CreateEmbed::new()
+    CreateEmbed::new()
         .title("Lista de Comandos")
-        .colour(Colour::from_rgb(0, 255, 255));
-
-    for section in all_sections {
-        let joined = section.join("\n");
-        new_embed = new_embed.field("", joined, true);
-    }
-
-    Ok(vec![Response::send(vec![
-        ResponseBlueprint::default().add_embed(new_embed)
-    ])])
+        .colour(Colour::from_rgb(0, 255, 255))
+        .field("", fc!("**/{NAME_LOCALIZED}**: {DESCRIPTION_LOCALIZED}"), true)
+        .field(
+            "",
+            fc!(
+                "**/{} {}**: {}\n**/{} {}**: {}\n**/{} {}**: {}",
+                battle::NAME_LOCALIZED,
+                battle::start::NAME_LOCALIZED,
+                battle::start::DESCRIPTION_LOCALIZED,
+                battle::NAME_LOCALIZED,
+                battle::join::NAME_LOCALIZED,
+                battle::join::DESCRIPTION_LOCALIZED,
+                battle::NAME_LOCALIZED,
+                battle::end::NAME_LOCALIZED,
+                battle::end::DESCRIPTION_LOCALIZED,
+            ),
+            true,
+        )
+        .field(
+            "",
+            fc!(
+                "**/{} {}**: {}",
+                exp::NAME_LOCALIZED,
+                exp::bestow::NAME_LOCALIZED,
+                exp::bestow::DESCRIPTION_LOCALIZED
+            ),
+            true,
+        )
+        .field(
+            "",
+            fc!(
+                "**/{} {}**: {}",
+                id::NAME_LOCALIZED,
+                id::distribute::NAME_LOCALIZED,
+                id::distribute::DESCRIPTION_LOCALIZED
+            ),
+            true,
+        )
+        .field("", fc!("**/{}**: {}", ping::NAME_LOCALIZED, ping::DESCRIPTION_LOCALIZED), true)
 }

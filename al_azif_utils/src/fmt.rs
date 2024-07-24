@@ -37,6 +37,6 @@ fn _join_with_and(words: Vec<&str>) -> String {
         _ => {
             let (head, tail) = words.split_at(len - 1);
             format!("{} e {}", head.join(", "), tail[0])
-        }
+        },
     }
 }

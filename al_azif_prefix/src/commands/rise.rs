@@ -5,9 +5,7 @@ pub const ALIASES: [&str; 2] = ["rise", "subir"];
 
 pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Responses<'a>> {
     let Ok(battle_m) = Mirror::<Battle>::get(bot, msg.channel_id.to_string()).await else {
-        return response::simple_send_and_delete_with_original(
-            "Nenhuma batalha ocorrendo neste canal.",
-        );
+        return response::simple_send_and_delete_with_original("Nenhuma batalha ocorrendo neste canal.");
     };
     let mut battle = battle_m.write().await;
 
@@ -20,14 +18,11 @@ pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Response
     let mut user = user_m.write().await;
 
     let might_bonus = user.might / 2;
-    user.acquire_effect(Effect::Rise {
-        might_bonus,
-        turn_duration: 1,
-    });
+    user.acquire_effect(Effect::Rise { might_bonus, turn_duration: 1 });
 
     let mut blueprints = Vec::new();
 
-    blueprints.push(ResponseBlueprint::default().set_content(f!(
+    blueprints.push(ResponseBlueprint::new().set_content(f!(
         "💪 | **{}** adquiriu o efeito **Subir** por **1** turno. [**{}** {MGT_EMOJI}]",
         user.name,
         mark_thousands_and_show_sign(might_bonus)

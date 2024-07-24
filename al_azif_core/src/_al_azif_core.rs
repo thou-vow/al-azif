@@ -1,7 +1,8 @@
+#![feature(linked_list_cursors)]
+
 pub mod _prelude;
 pub mod battle;
 pub mod bot;
-pub mod component_args;
 pub mod constants;
 pub mod database;
 pub mod effect;

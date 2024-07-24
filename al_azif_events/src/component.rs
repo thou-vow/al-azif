@@ -10,16 +10,11 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction) -
     }
 }
 
-pub async fn run_slash(
-    bot: &impl AsBot,
-    ctx: &Context,
-    comp: &ComponentInteraction,
-    args: &[&str],
-) -> Result<()> {
+pub async fn run_slash(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction, args: &[&str]) -> Result<()> {
     use al_azif_slash::commands::*;
 
     let execution_result = match args[0] {
-        "id" => id::run_component(bot, comp, &args[1..]).await,
+        "id" => id::run_component(bot, comp, &args[1 ..]).await,
         _ => return Ok(()),
     };
 
@@ -63,22 +58,18 @@ pub async fn perform_response_responses<'a>(
 
                 comp.create_response(
                     &ctx.http,
-                    CreateInteractionResponse::Message(
-                        first_blueprint.create_interaction_response_message(),
-                    ),
+                    CreateInteractionResponse::Message(first_blueprint.create_interaction_response_message()),
                 )
                 .await?;
 
                 tokio::time::sleep(RESPONSE_INTERVAL).await;
 
                 for blueprint in blueprints.iter().skip(1) {
-                    comp.channel_id
-                        .send_message(&ctx.http, blueprint.create_message())
-                        .await?;
+                    comp.channel_id.send_message(&ctx.http, blueprint.create_message()).await?;
 
                     tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
-            }
+            },
             Response::SendAndDelete { blueprints } => {
                 let Some(first_blueprint) = blueprints.first() else {
                     continue;
@@ -86,78 +77,58 @@ pub async fn perform_response_responses<'a>(
 
                 comp.create_response(
                     &ctx.http,
-                    CreateInteractionResponse::Message(
-                        first_blueprint.create_interaction_response_message(),
-                    ),
+                    CreateInteractionResponse::Message(first_blueprint.create_interaction_response_message()),
                 )
                 .await?;
-                msgs_to_delete.push(
-                    ctx.http
-                        .get_original_interaction_response(&comp.token)
-                        .await?,
-                );
+                msgs_to_delete.push(ctx.http.get_original_interaction_response(&comp.token).await?);
 
                 tokio::time::sleep(RESPONSE_INTERVAL).await;
 
                 for blueprint in blueprints.iter().skip(1) {
-                    msgs_to_delete.push(
-                        comp.channel_id
-                            .send_message(&ctx.http, blueprint.create_message())
-                            .await?,
-                    );
+                    msgs_to_delete
+                        .push(comp.channel_id.send_message(&ctx.http, blueprint.create_message()).await?);
 
                     tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
-            }
+            },
             Response::SendEphemeral { blueprint } => {
                 comp.create_response(
                     &ctx.http,
                     CreateInteractionResponse::Message(
-                        blueprint
-                            .create_interaction_response_message()
-                            .ephemeral(true),
+                        blueprint.create_interaction_response_message().ephemeral(true),
                     ),
                 )
                 .await?;
-            }
+            },
             Response::SendLoose { blueprints } => {
                 for blueprint in blueprints {
-                    comp.channel_id
-                        .send_message(&ctx.http, blueprint.create_message())
-                        .await?;
+                    comp.channel_id.send_message(&ctx.http, blueprint.create_message()).await?;
                 }
 
                 tokio::time::sleep(RESPONSE_INTERVAL).await;
-            }
+            },
             Response::SendLooseAndDelete { blueprints } => {
                 for blueprint in blueprints {
-                    msgs_to_delete.push(
-                        comp.channel_id
-                            .send_message(&ctx.http, blueprint.create_message())
-                            .await?,
-                    );
+                    msgs_to_delete
+                        .push(comp.channel_id.send_message(&ctx.http, blueprint.create_message()).await?);
                 }
-            }
+            },
             Response::Update { blueprint } => {
                 comp.create_response(
                     &ctx.http,
-                    CreateInteractionResponse::UpdateMessage(
-                        blueprint.create_interaction_response_message(),
-                    ),
+                    CreateInteractionResponse::UpdateMessage(blueprint.create_interaction_response_message()),
                 )
                 .await?;
 
                 tokio::time::sleep(RESPONSE_INTERVAL).await;
-            }
+            },
             Response::UpdateDelayless { blueprint } => {
                 comp.create_response(
                     &ctx.http,
-                    CreateInteractionResponse::UpdateMessage(
-                        blueprint.create_interaction_response_message(),
-                    ),
+                    CreateInteractionResponse::UpdateMessage(blueprint.create_interaction_response_message()),
                 )
                 .await?;
-            }
+            },
         }
     }
 

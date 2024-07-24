@@ -4,15 +4,9 @@ pub const TAG: &str = "attack";
 pub const ALIASES: [&str; 2] = ["attack", "atacar"];
 pub const ACCURACY_BONUS: i64 = 0;
 
-pub async fn run_command<'a>(
-    bot: &impl AsBot,
-    msg: &Message,
-    args: &[&str],
-) -> Result<Responses<'a>> {
+pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message, args: &[&str]) -> Result<Responses<'a>> {
     let Ok(battle_m) = Mirror::<Battle>::get(bot, msg.channel_id.to_string()).await else {
-        return response::simple_send_and_delete_with_original(
-            "Nenhuma batalha ocorrendo neste canal.",
-        );
+        return response::simple_send_and_delete_with_original("Nenhuma batalha ocorrendo neste canal.");
     };
     let mut battle = battle_m.write().await;
 
@@ -24,10 +18,7 @@ pub async fn run_command<'a>(
         return response::simple_send_and_delete_with_original("O argumento 'alvo' é obrigatório.");
     };
 
-    if !battle
-        .opponents
-        .contains_key(&FixedString::from_str_trunc(target_tag))
-    {
+    if !battle.opponents.contains_key(&FixedString::from_str_trunc(target_tag)) {
         return response::simple_send_and_delete_with_original("O alvo não está na batalha.");
     }
 
@@ -36,9 +27,7 @@ pub async fn run_command<'a>(
     };
 
     if *target_tag == battle.current_turn_owner_tag {
-        return response::simple_send_and_delete_with_original(
-            "O alvo não pode ser o próprio usuário.",
-        );
+        return response::simple_send_and_delete_with_original("O alvo não pode ser o próprio usuário.");
     }
 
     let mut blueprints = Vec::new();
@@ -53,10 +42,8 @@ pub async fn run_command<'a>(
 
     let security_key = Timestamp::now().unix_timestamp();
 
-    blueprints.push(request_reaction::create(
-        f!("⏳ | **{}**, é a vez de sua reação.", target.name),
-        security_key,
-    )?);
+    blueprints
+        .push(request_reaction::create(f!("⏳ | **{}**, é a vez de sua reação.", target.name), security_key)?);
 
     battle.current_moment = Moment::PrimaryAction {
         primary_action_tag: FixedString::from_static_trunc(TAG),
@@ -69,24 +56,21 @@ pub async fn run_command<'a>(
 }
 
 fn generate_preliminary_responses<'a>(user: &Id, target: &Id) -> Blueprints<'a> {
-    vec![ResponseBlueprint::default().set_content(f!(
-        "{STRIKE_EMOJI} | **{}** irá atacar **{}**.",
-        user.name,
-        target.name,
-    ))]
+    vec![ResponseBlueprint::new()
+        .set_content(f!("{STRIKE_EMOJI} | **{}** irá atacar **{}**.", user.name, target.name,))]
 }
 
 fn generate_forecast_responses<'a>(attacker: &mut Id, target: &Id) -> Blueprints<'a> {
     let attacker_damage_evaluation = attacker.might + attacker.evaluate_might_bonuses();
 
     let content = match attacker_damage_evaluation * 100 / (target.constitution * 10) {
-        0..=5 => fc!("{LIGHT_EMOJI} | Parece que irá causar um dano leve."),
-        6..=10 => fc!("{MEDIUM_EMOJI} | Parece que irá causar um dano moderado."),
-        11..=20 => fc!("{HEAVY_EMOJI} | Parece que irá causar um dano grave."),
+        0 ..= 5 => fc!("{LIGHT_EMOJI} | Parece que irá causar um dano leve."),
+        6 ..= 10 => fc!("{MEDIUM_EMOJI} | Parece que irá causar um dano moderado."),
+        11 ..= 20 => fc!("{HEAVY_EMOJI} | Parece que irá causar um dano grave."),
         _ => fc!("{SEVERE_EMOJI} | Parece que irá causar um dano *severo*."),
     };
 
-    vec![ResponseBlueprint::default().set_content(content)]
+    vec![ResponseBlueprint::new().set_content(content)]
 }
 
 pub fn execute<'a>(attacker: &mut Id, target: &mut Id) -> Blueprints<'a> {
