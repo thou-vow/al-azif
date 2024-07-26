@@ -1,16 +1,16 @@
 use crate::_prelude::*;
 
-pub const TAG: &str = "rise";
-pub const ALIASES: [&str; 2] = ["rise", "subir"];
+pub const NAME: &str = "rise";
+pub const NAME_PT: &str = "elevar";
 
-pub async fn run_command<'a>(bot: &impl AsBot, msg: &Message) -> Result<Responses<'a>> {
+pub async fn run<'a>(bot: &impl AsBot, msg: &Message) -> Result<Responses<'a>> {
     let Ok(battle_m) = Mirror::<Battle>::get(bot, msg.channel_id.to_string()).await else {
-        return response::simple_send_and_delete_with_original("Nenhuma batalha ocorrendo neste canal.");
+        return Ok(response::simple_send_and_delete_with_original("Nenhuma batalha ocorrendo neste canal."));
     };
     let mut battle = battle_m.write().await;
 
     let Moment::None = battle.current_moment else {
-        return response::simple_send_and_delete_with_original("Você não pode usar agora.");
+        return Ok(response::simple_send_and_delete_with_original("Você não pode usar agora."));
     };
 
     let user_m = Mirror::<Id>::get(bot, &battle.current_turn_owner_tag).await?;

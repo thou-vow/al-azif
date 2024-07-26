@@ -1,4 +1,4 @@
-use serenity::all::*;
+use crate::_prelude::*;
 
 pub fn copy_button<'a>(button: &Button) -> CreateButton<'a> {
     let mut copy = match &button.data {

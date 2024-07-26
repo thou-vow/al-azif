@@ -10,13 +10,15 @@ pub async fn run<'a>(ctx: &Context, slash: &CommandInteraction) -> Result<Vec<Re
 
     slash
         .create_response(&ctx.http, CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()))
-        .await?;
+        .await
+        .map_err(SlashError::CouldNotCreateInteractionResponse)?;
 
     let elapsed = initial_point.elapsed().as_millis();
 
     slash
         .edit_response(&ctx.http, EditInteractionResponse::new().content(f!("Latência atual: {elapsed}ms")))
-        .await?;
+        .await
+        .map_err(SlashError::CouldNotEditInteractionResponse)?;
 
     Ok(vec![])
 }

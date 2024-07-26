@@ -1,7 +1,4 @@
-use crate::fmt::mark_thousands;
-use rand::Rng;
-use serde::{Deserialize, Serialize};
-use std::format as f;
+use crate::_prelude::*;
 
 pub struct RollExpression {
     pub dices:     i64,

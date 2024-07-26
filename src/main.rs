@@ -28,6 +28,7 @@ async fn try_main() -> Result<()> {
 
     let mut client = Client::builder(&config::get_bot_token()?, intents)
         .event_handler(Bot {
+            lang: Pt,
             cache:      Arc::new(InMemoryDatabase::default()),
             main_guild: config::get_main_guild()?,
         })

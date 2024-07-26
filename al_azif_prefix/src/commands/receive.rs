@@ -1,10 +1,9 @@
 use crate::_prelude::*;
 
-pub async fn run_component<'a>(
-    bot: &impl AsBot,
-    comp: &ComponentInteraction,
-    button_security_key: i64,
-) -> Result<Responses<'a>> {
+pub const NAME: &str = "receive";
+pub const NAME_PT: &str = "receber";
+
+pub async fn run_component<'a>(bot: &impl AsBot, comp: &ComponentInteraction) -> Result<Responses<'a>> {
     let Ok(battle_m) = Mirror::<Battle>::get(bot, comp.channel_id.to_string()).await else {
         // No battle is currently happening in this channel.
         return Ok(Vec::new());
@@ -12,17 +11,12 @@ pub async fn run_component<'a>(
 
     let mut battle = battle_m.write().await;
 
-    let Moment::PrimaryAction { primary_action_tag, attacker_tag, target_tag, security_key } =
+    let Moment::PrimaryAction { primary_action_tag, attacker_tag, target_tag } =
         &battle.current_moment
     else {
         // Attack didn't start yet (receive action is not available)
         return Ok(Vec::new());
     };
-
-    if button_security_key != *security_key {
-        // The moment to press it already passed
-        return Ok(Vec::new());
-    }
 
     let mut responses = vec![Response::update_delayless(request_reaction::disable_button(&comp.message, 0))];
 
@@ -33,7 +27,7 @@ pub async fn run_component<'a>(
     let attacker_m = Mirror::<Id>::get(bot, &attacker_tag).await?;
     let mut attacker = attacker_m.write().await;
 
-    blueprints.extend(al_azif_prefix::utils::execute_attack(primary_action_tag, &mut attacker, &mut target));
+    blueprints.extend(crate::utils::execute_attack(primary_action_tag, &mut attacker, &mut target));
 
     mem::drop(target);
     mem::drop(attacker);

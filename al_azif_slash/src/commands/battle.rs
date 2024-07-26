@@ -48,7 +48,7 @@ pub mod end {
     pub async fn run<'a>(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Responses<'a>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return response::simple_send_and_delete("Não há uma batalha acontecendo neste canal.");
+            return Ok(response::simple_send_and_delete("Não há uma batalha acontecendo neste canal."));
         };
 
         let battle = battle_m.read().await;
@@ -60,7 +60,7 @@ pub mod end {
 
         Mirror::<Battle>::cut(bot, &battle_tag).await?;
 
-        response::simple_send("Batalha finalizada.")
+        Ok(response::simple_send("Batalha finalizada."))
     }
 }
 
@@ -72,18 +72,10 @@ pub mod join {
     pub const NAME_LOCALIZED: &str = "participar";
     pub const DESCRIPTION_LOCALIZED: &str = "Integrar Ids na batalha";
 
-    pub async fn run<'a>(
-        bot: &impl AsBot,
-        slash: &CommandInteraction,
-        args: &[ResolvedOption<'_>],
-    ) -> Result<Responses<'a>> {
+    pub async fn run<'a>(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Responses<'a>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return response::simple_send("Não há uma batalha neste canal.");
-        };
-
-        let ResolvedValue::String(id_tags) = args[0].value else {
-            unreachable!("The 'ids' argument of the 'battle start' command must be a string!");
+            return Ok(response::simple_send("Não há uma batalha neste canal."));
         };
 
         let mut blueprints = Vec::new();
@@ -112,7 +104,7 @@ pub mod join {
                 f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
             };
 
-            return response::simple_send_and_delete(new_content);
+            return Ok(response::simple_send_and_delete(new_content));
         }
 
         if !already_in_battle_id_tags.is_empty() {
@@ -125,7 +117,7 @@ pub mod join {
                 f!("O Id `{}` já está em batalha.", already_in_battle_id_tags.first().unwrap())
             };
 
-            return response::simple_send_and_delete(new_content);
+            return Ok(response::simple_send_and_delete(new_content));
         }
 
         let mut joined_id_names = Vec::new();
@@ -161,16 +153,12 @@ pub mod start {
     pub async fn run<'a>(
         bot: &impl AsBot,
         slash: &CommandInteraction,
-        args: &[ResolvedOption<'_>],
+        id_tags: &str,
     ) -> Result<Vec<Response<'a>>> {
         let battle_tag = slash.channel_id.to_string();
         if Mirror::<Battle>::get(bot, &battle_tag).await.is_ok() {
-            return response::simple_send("Já está ocorrendo uma batalha neste canal.");
+            return Ok(response::simple_send("Já está ocorrendo uma batalha neste canal."));
         }
-
-        let ResolvedValue::String(id_tags) = args[0].value else {
-            unreachable!("The 'ids' argument of the 'battle start' command must be a string!");
-        };
 
         let mut invalid_id_tags = Vec::new();
         let mut already_in_battle_id_tags = Vec::new();
@@ -196,7 +184,7 @@ pub mod start {
                 f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
             };
 
-            return response::simple_send_and_delete(new_content);
+            return Ok(response::simple_send_and_delete(new_content));
         }
 
         if !already_in_battle_id_tags.is_empty() {
@@ -209,11 +197,11 @@ pub mod start {
                 f!("O Id `{}` já está em batalha.", already_in_battle_id_tags.first().unwrap())
             };
 
-            return response::simple_send_and_delete(new_content);
+            return Ok(response::simple_send_and_delete(new_content));
         }
 
         if id_ms.len() < 2 {
-            return response::simple_send_and_delete("Precisa de pelo menos 2 Ids para iniciar uma batalha.");
+            return Ok(response::simple_send_and_delete("Precisa de pelo menos 2 Ids para iniciar uma batalha."));
         }
 
         let mut blueprints = Vec::new();

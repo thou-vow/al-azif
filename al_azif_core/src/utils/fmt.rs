@@ -1,3 +1,5 @@
+use crate::_prelude::*;
+
 pub fn mark_thousands(num: i64) -> String {
     let mut formatted_num = num
         .abs()
@@ -6,7 +8,7 @@ pub fn mark_thousands(num: i64) -> String {
         .rchunks(3)
         .rev()
         .map(std::str::from_utf8)
-        .collect::<Result<Vec<&str>, _>>()
+        .collect::<std::result::Result<Vec<&str>, _>>()
         .unwrap()
         .join(".");
 
@@ -20,7 +22,7 @@ pub fn mark_thousands(num: i64) -> String {
 pub fn mark_thousands_and_show_sign(num: i64) -> String {
     let mut formatted_num = mark_thousands(num);
     if num > 0 {
-        formatted_num = format!("+{formatted_num}");
+        formatted_num = f!("+{formatted_num}");
     }
     formatted_num
 }
@@ -36,7 +38,7 @@ fn _join_with_and(words: Vec<&str>) -> String {
         2 => format!("{} e {}", words[0], words[1]),
         _ => {
             let (head, tail) = words.split_at(len - 1);
-            format!("{} e {}", head.join(", "), tail[0])
+            f!("{} e {}", head.join(", "), tail[0])
         },
     }
 }

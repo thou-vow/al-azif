@@ -6,7 +6,6 @@ edition.workspace = true
 path = "src/_al_azif_core.rs"
 
 [dependencies]
-al_azif_utils.workspace = true
 anyhow.workspace = true
 const_format.workspace = true
 rand.workspace = true

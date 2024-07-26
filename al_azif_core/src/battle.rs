@@ -106,7 +106,6 @@ pub enum Moment {
         primary_action_tag: FixedString,
         attacker_tag:       FixedString,
         target_tag:         FixedString,
-        security_key:       i64,
     },
 }
 

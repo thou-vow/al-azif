@@ -2,7 +2,7 @@ use crate::_prelude::*;
 
 pub fn create<'a>(content: impl Into<Cow<'a, str>>, security_key: i64) -> Result<ResponseBlueprint<'a>> {
     let receive_button = CreateButton::new(f!("unclassified receive {security_key}"))
-        .emoji(ReactionType::Unicode("⏭".parse()?))
+        .emoji(ReactionType::Unicode("⏭".parse().unwrap()))
         .style(ButtonStyle::Danger);
 
     Ok(ResponseBlueprint::new()
@@ -31,9 +31,9 @@ pub fn disable_button<'a>(message: &Message, button_column: usize) -> ResponseBl
     let new_buttons = buttons
         .iter()
         .take(button_column)
-        .map(|original_button| al_azif_utils::serenity::copy_button(original_button))
+        .map(|original_button| utils::serenity::copy_button(original_button))
         .chain(iter::once(
-            al_azif_utils::serenity::copy_button(buttons.get(button_column).unwrap_or_else(|| {
+            utils::serenity::copy_button(buttons.get(button_column).unwrap_or_else(|| {
                 unreachable!(
                     "Missing triggered button of index {button_column} on request reaction disable button"
                 )
@@ -44,7 +44,7 @@ pub fn disable_button<'a>(message: &Message, button_column: usize) -> ResponseBl
             buttons
                 .iter()
                 .skip(button_column + 1)
-                .map(|original_button| al_azif_utils::serenity::copy_button(original_button)),
+                .map(|original_button| utils::serenity::copy_button(original_button)),
         )
         .collect::<Vec<_>>();
 

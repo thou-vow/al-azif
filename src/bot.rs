@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 pub struct Bot {
+    pub lang: Lang,
     pub cache:      Arc<InMemoryDatabase>,
     pub main_guild: GuildId,
 }
@@ -30,10 +31,12 @@ impl EventHandler for Bot {
 
 impl AsBot for Bot {
     fn get_cache(&self) -> Arc<InMemoryDatabase> { self.cache.clone() }
-
     fn get_main_guild(&self) -> &GuildId { &self.main_guild }
 }
 
+impl AsRef<Lang> for Bot {
+    fn as_ref(&self) -> &Lang { &self.lang }
+}
 impl AsRef<InMemoryStore<Battle>> for Bot {
     fn as_ref(&self) -> &InMemoryStore<Battle> { &self.cache.battles }
 }

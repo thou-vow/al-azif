@@ -37,12 +37,8 @@ pub mod bestow {
     pub const NAME_LOCALIZED: &str = "conceder";
     pub const DESCRIPTION_LOCALIZED: &str = "Conceder experiência para os Ids especificados";
 
-    pub async fn run<'a>(bot: &impl AsBot, args: &[ResolvedOption<'_>]) -> Result<Vec<Response<'a>>> {
+    pub async fn run<'a>(bot: &impl AsBot, (id_tags, value): (&str, i64)) -> Result<Vec<Response<'a>>> {
         let mut blueprints = Vec::new();
-
-        let ResolvedValue::String(id_tags) = args[0].value else {
-            unreachable!("The 'ids' argument of the 'exp bestow' command must be a string!");
-        };
 
         let mut id_ms = Vec::new();
         let mut invalid_id_tags = Vec::new();
@@ -64,12 +60,8 @@ pub mod bestow {
                 f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
             };
 
-            return response::simple_send_and_delete(new_content);
+            return Ok(response::simple_send_and_delete(new_content));
         }
-
-        let ResolvedValue::Integer(value) = args[1].value else {
-            unreachable!("The 'value' argument of the 'exp bestow' command must be an integer!");
-        };
 
         for id_m in id_ms {
             let mut id = id_m.write().await;

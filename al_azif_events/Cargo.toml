@@ -11,5 +11,6 @@ al_azif_prefix.workspace = true
 al_azif_slash.workspace = true
 anyhow.workspace = true
 serenity.workspace = true
+thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true

@@ -106,23 +106,21 @@ impl<'a> ResponseBlueprint<'a> {
     }
 }
 
-pub fn simple_send<'a>(new_content: impl Into<Cow<'a, str>>) -> Result<Vec<Response<'a>>> {
-    Ok(vec![Response::Send {
+pub fn simple_send<'a>(new_content: impl Into<Cow<'a, str>>) -> Vec<Response<'a>> {
+    vec![Response::Send {
         blueprints: vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }],
-    }])
+    }]
 }
 
-pub fn simple_send_and_delete<'a>(new_content: impl Into<Cow<'a, str>>) -> Result<Vec<Response<'a>>> {
-    Ok(vec![Response::SendAndDelete {
+pub fn simple_send_and_delete<'a>(new_content: impl Into<Cow<'a, str>>) -> Vec<Response<'a>> {
+    vec![Response::SendAndDelete {
         blueprints: vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }],
-    }])
+    }]
 }
 
-pub fn simple_send_and_delete_with_original<'a>(
-    new_content: impl Into<Cow<'a, str>>,
-) -> Result<Vec<Response<'a>>> {
-    Ok(Response::send_and_delete_with_original(vec![ResponseBlueprint {
+pub fn simple_send_and_delete_with_original<'a>(new_content: impl Into<Cow<'a, str>>) -> Vec<Response<'a>> {
+    Response::send_and_delete_with_original(vec![ResponseBlueprint {
         new_content: Some(new_content.into()),
         ..Default::default()
-    }]))
+    }])
 }
