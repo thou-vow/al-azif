@@ -2,18 +2,18 @@ use crate::_prelude::*;
 
 pub const NAME: &str = "id";
 pub const DESCRIPTION: &str = "About Id";
-pub const NAME_LOCALIZED: &str = "id";
-pub const DESCRIPTION_LOCALIZED: &str = "Sobre Id";
+pub const NAME_PT: &str = "id";
+pub const DESCRIPTION_PT: &str = "Sobre Id";
 
 pub fn register() -> CreateCommand<'static> {
     CreateCommand::new(NAME)
         .description(DESCRIPTION)
-        .name_localized("pt-BR", NAME_LOCALIZED)
-        .description_localized("pt-BR", DESCRIPTION_LOCALIZED)
+        .name_localized("pt-BR", NAME_PT)
+        .description_localized("pt-BR", DESCRIPTION_PT)
         .add_option(
             CreateCommandOption::new(CommandOptionType::SubCommand, distribute::NAME, distribute::DESCRIPTION)
-                .name_localized("pt-BR", distribute::NAME_LOCALIZED)
-                .description_localized("pt-BR", distribute::DESCRIPTION_LOCALIZED)
+                .name_localized("pt-BR", distribute::NAME_PT)
+                .description_localized("pt-BR", distribute::DESCRIPTION_PT)
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::String, "id", "The Id to distribute")
                         .description_localized("pt-BR", "O Id para distribuir")
@@ -27,10 +27,10 @@ pub mod distribute {
 
     pub const NAME: &str = "distribute";
     pub const DESCRIPTION: &str = "Distribute points to the attributes";
-    pub const NAME_LOCALIZED: &str = "distribuir";
-    pub const DESCRIPTION_LOCALIZED: &str = "Distribuir pontos para os atributos";
+    pub const NAME_PT: &str = "distribuir";
+    pub const DESCRIPTION_PT: &str = "Distribuir pontos para os atributos";
 
-    pub async fn run<'a>(bot: &impl AsBot, id_tag: &str) -> Result<Responses<'a>> {
+    pub async fn run_slash<'a>(bot: &impl AsBot, id_tag: &str) -> Result<Responses<'a>> {
         let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
             return Ok(response::simple_send_and_delete("Informe um Id válido."));
         };
@@ -113,8 +113,10 @@ pub mod distribute {
             "dex" => id.dexterity += spent,
             "cog" => id.cognition += spent,
             "cha" => id.charisma += spent,
-            invalid => {
-                unreachable!("Invalid invested attribute on 'id distribute' component interaction: {invalid}")
+            _ => {
+                return Err(SlashError::InvalidInvestedAttribute {
+                    attribute_str: FixedString::from_str_trunc(attribute_str),
+                })
             },
         }
 

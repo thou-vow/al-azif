@@ -109,29 +109,13 @@ impl Id {
     pub fn acquire_effect<'a>(&mut self, new_effect: Effect) -> Blueprints<'a> {
         let mut blueprints = Vec::new();
 
-        'already_acquired: {
-            for effect in self.effects.iter_mut() {
-                match (effect, &new_effect) {
-                    (Effect::Block, Effect::Block) => break 'already_acquired,
-                    (
-                        Effect::Rise { might_bonus, turn_duration },
-                        Effect::Rise { might_bonus: new_might_bonus, turn_duration: new_turn_duration },
-                    ) => {
-                        *might_bonus = *new_might_bonus;
-                        *turn_duration = *new_turn_duration;
-                        break 'already_acquired;
-                    },
-                    _ => (),
-                }
-            }
-            self.effects.push_back(new_effect);
-        }
+        self.effects.push_back(new_effect);
 
         blueprints
     }
 }
 impl Id {
-    pub fn evaluate_might_bonuses(&mut self) -> i64 {
+    pub fn evaluate_might_bonuses(&self) -> i64 {
         let mut bonuses = 0;
 
         for effect in self.effects.iter() {
@@ -172,7 +156,30 @@ impl Id {
 
         while let Some(effect) = cursor.current() {
             match effect {
-                Effect::Rise { turn_duration, might_bonus } => {
+                Effect::Bleed { damage_over_turn, turn_duration } => {
+                    let previous_hp = self.hp;
+                    self.hp -= *damage_over_turn;
+                    blueprints.push(ResponseBlueprint::new().set_content(f!(
+                        "💔 | **{}** sofreu **{}** de dano devido ao efeito **Sangramento**. [{HP_SHORT}: **{}** \
+                         → **{}**]",
+                        self.name,
+                        mark_thousands(*damage_over_turn),
+                        mark_thousands(previous_hp),
+                        mark_thousands(self.hp),
+                    )));
+
+                    if *turn_duration <= 0 {
+                        blueprints.push(
+                            ResponseBlueprint::new()
+                                .set_content(f!("💔 | **{}** perdeu o efeito **Sangramento**.", self.name,)),
+                        );
+                        cursor.remove_current();
+                        continue;
+                    } else {
+                        *turn_duration -= 1;
+                    }
+                },
+                Effect::Rise { might_bonus, turn_duration } => {
                     if *turn_duration <= 0 {
                         blueprints.push(ResponseBlueprint::new().set_content(f!(
                             "💪 | **{}** perdeu o efeito **Subir**. [**{}** {MGT_EMOJI}]",
@@ -202,17 +209,15 @@ impl Reflective for Id {
 
 #[derive(Deserialize, Serialize)]
 pub enum Gender {
-    Other  = 0,
-    Female = 1,
-    Male   = 2,
+    Other,
+    Female,
+    Male,
 }
 
 #[derive(Deserialize, Serialize)]
 pub enum Age {
-    Child      = 1,
-    Teen       = 2,
-    Young      = 3,
-    Adult      = 4,
-    MiddleAged = 5,
-    Senior     = 6,
+    Child,
+    Teen,
+    Adult,
+    Senior,
 }

@@ -1,7 +1,8 @@
 use crate::_prelude::*;
 
-pub trait AsBot: AsRef<Lang> + AsRef<InMemoryStore<Battle>> + AsRef<InMemoryStore<Id>> + AsRef<InMemoryStore<Player>> {
+pub trait AsBot: AsRef<InMemoryStore<Battle>> + AsRef<InMemoryStore<Id>> + AsRef<InMemoryStore<Player>> {
     fn get_cache(&self) -> Arc<InMemoryDatabase>;
+    fn get_lang(&self) -> &Lang;
     fn get_main_guild(&self) -> &GuildId;
     fn spawn_flush_routine(&self) {
         let cache = self.get_cache();
@@ -39,3 +40,10 @@ pub enum Lang {
     En,
     Pt,
 }
+
+pub macro lang_diff($bot:expr, en: $en:expr, pt: $pt:expr) {{
+    match $bot.get_lang() {
+        Lang::En => $en,
+        Lang::Pt => $pt,
+    }
+}}

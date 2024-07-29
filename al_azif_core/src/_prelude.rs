@@ -1,19 +1,16 @@
 pub use crate::{
     battle::{advance, Battle, Moment, Opponent},
-    bot::{AsBot, Lang::{self, En, Pt}, InMemoryDatabase},
+    bot::{lang_diff, AsBot, InMemoryDatabase, Lang},
     constants::*,
     database::{self, Error as DatabaseError, Reflective},
     effect::Effect,
     id::{Age, Gender, Id},
     mirror::{InMemoryStore, Mirror, ReadMirror, WriteMirror},
-    parse_comp_arg,
     player::Player,
-    request_reaction,
     response::{self, Blueprints, Response, ResponseBlueprint, Responses},
     utils::{
         self,
         fmt::{join_with_and, mark_thousands, mark_thousands_and_show_sign},
-        parse_args::Error as ParseArgsError,
         roll::{RollExpression, RollSummary},
     },
     Error as CoreError,
@@ -51,11 +48,12 @@ pub use std::{
     borrow::Cow,
     cmp::{max, min, Ordering, Reverse},
     collections::{HashMap, HashSet, LinkedList},
+    convert::Infallible,
     fmt::{self, Display, Formatter},
     format as f, fs,
     future::Future,
     io, iter, mem,
-    ops::{Deref, DerefMut},
+    ops::{ControlFlow, Deref, DerefMut, FromResidual, Try},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -63,4 +61,4 @@ pub use thiserror::Error;
 pub use tokio::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 pub use tracing::{debug, error, info, instrument, span, subscriber, trace, warn, Level};
 
-pub type Result<T> = std::result::Result<T, CoreError>;
+pub(crate) type Result<T> = std::result::Result<T, CoreError>;

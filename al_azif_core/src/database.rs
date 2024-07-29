@@ -25,7 +25,7 @@ pub fn get<T: Reflective>(tag: impl AsRef<str>) -> Result<T> {
     _get(tag)
 }
 fn _get<T: Reflective>(tag: &str) -> Result<T> {
-    let full_path = f!("{}/{tag}.bin", T::FOLDER_PATH);
+    let full_path = f!("{}/{tag}.json", T::FOLDER_PATH);
 
     let serialized = fs::read_to_string(full_path).map_err(DatabaseError::CannotReadFile)?;
 

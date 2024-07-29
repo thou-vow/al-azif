@@ -1,3 +1,5 @@
+#![feature(decl_macro)]
+
 pub mod _prelude;
 pub mod component;
 pub mod prefix;
@@ -15,6 +17,8 @@ pub enum Error {
     CouldNotDeleteMessage(SerenityError),
     #[error("Could not get original interaction response, why: {0}")]
     CouldNotGetOriginalInteractionResponse(SerenityError),
+    #[error("Could not parse component arg '{arg}' into type {into_type}")]
+    CouldNotParseComponentArgIntoType { arg: FixedString, into_type: &'static str },
     #[error("Could not send message, why: {0}")]
     CouldNotSendMessage(SerenityError),
     #[error("Could not set commands, why: {0}")]

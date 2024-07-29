@@ -2,23 +2,23 @@ use crate::_prelude::*;
 
 pub const NAME: &str = "battle";
 pub const DESCRIPTION: &str = "About battle";
-pub const NAME_LOCALIZED: &str = "batalha";
-pub const DESCRIPTION_LOCALIZED: &str = "Sobre batalha";
+pub const NAME_PT: &str = "batalha";
+pub const DESCRIPTION_PT: &str = "Sobre batalha";
 
 pub fn register() -> CreateCommand<'static> {
     CreateCommand::new(NAME)
         .description(DESCRIPTION)
-        .name_localized("pt-BR", NAME_LOCALIZED)
-        .description_localized("pt-BR", DESCRIPTION_LOCALIZED)
+        .name_localized("pt-BR", NAME_PT)
+        .description_localized("pt-BR", DESCRIPTION_PT)
         .add_option(
             CreateCommandOption::new(CommandOptionType::SubCommand, end::NAME, end::DESCRIPTION)
-                .name_localized("pt-BR", end::NAME_LOCALIZED)
-                .description_localized("pt-BR", end::DESCRIPTION_LOCALIZED),
+                .name_localized("pt-BR", end::NAME_PT)
+                .description_localized("pt-BR", end::DESCRIPTION_PT),
         )
         .add_option(
             CreateCommandOption::new(CommandOptionType::SubCommand, join::NAME, join::DESCRIPTION)
-                .name_localized("pt-BR", join::NAME_LOCALIZED)
-                .description_localized("pt-BR", join::DESCRIPTION_LOCALIZED)
+                .name_localized("pt-BR", join::NAME_PT)
+                .description_localized("pt-BR", join::DESCRIPTION_PT)
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to join")
                         .description_localized("pt-BR", "Os Ids para ingressar")
@@ -27,8 +27,8 @@ pub fn register() -> CreateCommand<'static> {
         )
         .add_option(
             CreateCommandOption::new(CommandOptionType::SubCommand, start::NAME, start::DESCRIPTION)
-                .name_localized("pt-BR", start::NAME_LOCALIZED)
-                .description_localized("pt-BR", start::DESCRIPTION_LOCALIZED)
+                .name_localized("pt-BR", start::NAME_PT)
+                .description_localized("pt-BR", start::DESCRIPTION_PT)
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to join")
                         .description_localized("pt-BR", "Os Ids para ingressar")
@@ -42,10 +42,10 @@ pub mod end {
 
     pub const NAME: &str = "end";
     pub const DESCRIPTION: &str = "End the battle";
-    pub const NAME_LOCALIZED: &str = "terminar";
-    pub const DESCRIPTION_LOCALIZED: &str = "Encerrar a batalha";
+    pub const NAME_PT: &str = "terminar";
+    pub const DESCRIPTION_PT: &str = "Encerrar a batalha";
 
-    pub async fn run<'a>(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Responses<'a>> {
+    pub async fn run_slash<'a>(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Responses<'a>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
             return Ok(response::simple_send_and_delete("Não há uma batalha acontecendo neste canal."));
@@ -69,10 +69,10 @@ pub mod join {
 
     pub const NAME: &str = "join";
     pub const DESCRIPTION: &str = "Join Ids to the battle";
-    pub const NAME_LOCALIZED: &str = "participar";
-    pub const DESCRIPTION_LOCALIZED: &str = "Integrar Ids na batalha";
+    pub const NAME_PT: &str = "participar";
+    pub const DESCRIPTION_PT: &str = "Integrar Ids na batalha";
 
-    pub async fn run<'a>(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Responses<'a>> {
+    pub async fn run_slash<'a>(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Responses<'a>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
             return Ok(response::simple_send("Não há uma batalha neste canal."));
@@ -147,10 +147,10 @@ pub mod start {
 
     pub const NAME: &str = "start";
     pub const DESCRIPTION: &str = "Start a battle";
-    pub const NAME_LOCALIZED: &str = "iniciar";
-    pub const DESCRIPTION_LOCALIZED: &str = "Iniciar uma batalha";
+    pub const NAME_PT: &str = "iniciar";
+    pub const DESCRIPTION_PT: &str = "Iniciar uma batalha";
 
-    pub async fn run<'a>(
+    pub async fn run_slash<'a>(
         bot: &impl AsBot,
         slash: &CommandInteraction,
         id_tags: &str,

@@ -1,135 +1,81 @@
 use crate::_prelude::*;
 
-macro_rules! match_slash {
-    ($name:expr, $args:expr,
-    $(
-        ($($($pattern_parts:ident)::+),+)
-        =>
-        $($function_parts:ident)::+
-        [$(
-            $($($api_tools_parts:ident)::+),+
-            $(
-                ;
-                $($arg_name:ident: $arg_type:tt),+
-            )?
-        )?]
-    ),*) => {
-        'match_slash: {
-            // This is a workaround to cheat the macro scoping rules.
-            // It makes the macro think every variable on this scope that uses '_args' will use it,
-            // unless using a sub or sub-sub command.
-            // This will most likely be optimized by the compiler.
-            let _args = $args;
-            match ($name, _args) {
-                $(match_slash!(@pattern ($($($pattern_parts)::+),+)) => {
-                    // '_iter' is included in this macro to access '_args' in the same scope.
-                    // Since $()? requires the optional metavariable to be present, it can't be written only when there are args.
-                    // Therefore, this inclusion is necessary and will most likely be optimized by the compiler.
-                    let mut _iter = _args.iter();
-                    $($function_parts)::+($($($($api_tools_parts)::*),* $(, ($({
-                        match parse_slash_arg!(_iter, stringify!($arg_name), $arg_type) {
-                            Ok(value) => value,
-                            Err(e) => break 'match_slash Err(e),
-                        }
-                    }),+))?)?).await.map_err(EventError::Slash)
-                }),*
-                (_, _) => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc($name) }),
-            }
-        }
-    };
-
-    // Subcommand
-    (@pattern (
-        $($cmd_name_parts:ident)::+,
-        $($sub_cmd_name_parts:ident)::+
-    )) => {
-        ($($cmd_name_parts)::+, [ResolvedOption { name: $($sub_cmd_name_parts)::+, value: ResolvedValue::SubCommand(_args), .. }, ..])
-    };
-
-    // Command
-    (@pattern (
-        $($cmd_name_parts:ident)::+
-    )) => {
-        ($($cmd_name_parts)::+, _args)
-    };
-}
-
-macro_rules! parse_slash_arg {
-    ($iter:expr, $name:expr, str) => {
+macro parse_slash_arg {
+    ($label:lifetime, $iter:expr, $name:expr, &str) => {
         if let Some(opt) = $iter.find(|opt| opt.name == $name) {
             match opt {
-                ResolvedOption { name: $name, value: ResolvedValue::String(value), .. } => Ok(*value),
+                ResolvedOption { name: $name, value: ResolvedValue::String(value), .. } => *value,
                 ResolvedOption { name: _, value: ResolvedValue::String(_), .. } => {
-                    Err(EventError::ExpectedAnotherSlashCommandOptionName {
+                    break $label Err(EventError::ExpectedAnotherSlashCommandOptionName {
                         r#type:        "String",
                         expected_name: $name,
                     })
                 },
                 ResolvedOption { name: $name, value: _, .. } => {
-                    Err(EventError::ExpectedAnotherSlashCommandOptionType {
+                    break $label Err(EventError::ExpectedAnotherSlashCommandOptionType {
                         name:          $name,
                         expected_type: "String",
                     })
                 },
-                _ => Err(EventError::ExpectedAnotherSlashCommandOption {
+                _ => break $label Err(EventError::ExpectedAnotherSlashCommandOption {
                     expected_name: $name,
                     expected_type: "String",
                 }),
             }
         } else {
-            Err(EventError::MissingRequiredSlashCommandOption { name: $name })
+            break $label Err(EventError::MissingRequiredSlashCommandOption { name: $name })
         }
-    };
-    ($iter:expr, $name:expr, Option<str>) => {
+    },
+    ($label:lifetime, $iter:expr, $name:expr, Option<str>) => {
         if let Some(opt) = $iter.find(|opt| opt.name == $name) {
             match opt {
-                ResolvedOption { name: $name, value: ResolvedValue::String(value), .. } => Ok(Some(*value)),
+                ResolvedOption { name: $name, value: ResolvedValue::String(value), .. } => Some(*value),
                 ResolvedOption { name: _, value: ResolvedValue::String(_), .. } => {
-                    Err(EventError::ExpectedAnotherSlashCommandOptionName {
+                    break $label Err(EventError::ExpectedAnotherSlashCommandOptionName {
                         r#type:        "String",
                         expected_name: $name,
                     })
                 },
                 ResolvedOption { name: $name, value: _, .. } => {
-                    Err(EventError::ExpectedAnotherSlashCommandOptionType {
+                    break $label Err(EventError::ExpectedAnotherSlashCommandOptionType {
                         name:          $name,
                         expected_type: "String",
                     })
                 },
-                _ => Err(EventError::ExpectedAnotherSlashCommandOption {
+                _ => break $label Err(EventError::ExpectedAnotherSlashCommandOption {
                     expected_name: $name,
                     expected_type: "String",
                 }),
             }
         } else {
-            Ok(None)
+            None
         }
-    };
-    ($iter:expr, $name:expr, i64) => {
+    },
+    ($label:lifetime, $iter:expr, $name:expr, i64) => {
         if let Some(opt) = $iter.find(|opt| opt.name == $name) {
             match opt {
-                ResolvedOption { name: $name, value: ResolvedValue::Integer(value), .. } => Ok(*value),
+                ResolvedOption { name: $name, value: ResolvedValue::Integer(value), .. } => *value,
                 ResolvedOption { name: _, value: ResolvedValue::Integer(_), .. } => {
-                    Err(EventError::ExpectedAnotherSlashCommandOptionName {
+                    break $label Err(EventError::ExpectedAnotherSlashCommandOptionName {
                         r#type:        "Integer",
                         expected_name: $name,
                     })
                 },
                 ResolvedOption { name: $name, value: _, .. } => {
-                    Err(EventError::ExpectedAnotherSlashCommandOptionType {
+                    break $label Err(EventError::ExpectedAnotherSlashCommandOptionType {
                         name:          $name,
                         expected_type: "Integer",
                     })
                 },
-                _ => Err(EventError::ExpectedAnotherSlashCommandOption {
+                _ => break $label Err(EventError::ExpectedAnotherSlashCommandOption {
                     expected_name: $name,
                     expected_type: "Integer",
                 }),
             }
         } else {
-            Err(EventError::MissingRequiredSlashCommandOption { name: $name })
+            break $label Err(EventError::MissingRequiredSlashCommandOption { name: $name })
         }
-    };
+    },
 }
 
 pub async fn register(bot: &impl AsBot, ctx: &Context) -> Result<()> {
@@ -145,19 +91,52 @@ pub async fn register(bot: &impl AsBot, ctx: &Context) -> Result<()> {
 
 pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) -> Result<()> {
     use al_azif_slash::commands::*;
+    use ResolvedOption as RO;
+    use ResolvedValue as RV;
 
-    let args = slash.data.options();
+    let name = slash.data.name.as_str();
+    let options = slash.data.options();
 
-    let execution_result = match_slash!(
-        slash.data.name.as_str(), args.as_slice(),
-        (battle::NAME, battle::end::NAME) => battle::end::run[bot, slash],
-        (battle::NAME, battle::join::NAME) => battle::join::run[bot, slash; ids: str],
-        (battle::NAME, battle::start::NAME) => battle::start::run[bot, slash; ids: str],
-        (exp::NAME, exp::bestow::NAME) => exp::bestow::run[bot; ids: str, value: i64],
-        (id::NAME, id::distribute::NAME) => id::distribute::run[bot; id: str],
-        (help::NAME) => help::run[],
-        (ping::NAME) => ping::run[ctx, slash]
-    );
+    let execution_result = 'match_slash: {
+        match name {
+            battle::NAME => match options.as_slice() {
+                [RO { name: battle::end::NAME, value: RV::SubCommand(_), .. }, ..] => {
+                    battle::end::run_slash(bot, slash).await.map_err(EventError::Slash)
+                },
+                [RO { name: battle::join::NAME, value: RV::SubCommand(args), .. }, ..] => {
+                    let mut iter = args.iter();
+                    let ids = parse_slash_arg!('match_slash, iter, "ids", &str);
+                    battle::join::run_slash(bot, slash, ids).await.map_err(EventError::Slash)
+                },
+                [RO { name: battle::start::NAME, value: RV::SubCommand(args), .. }, ..] => {
+                    let mut iter = args.iter();
+                    let ids = parse_slash_arg!('match_slash, iter, "ids", &str);
+                    battle::start::run_slash(bot, slash, ids).await.map_err(EventError::Slash)
+                },
+                _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
+            },
+            exp::NAME => match options.as_slice() {
+                [RO { name: exp::bestow::NAME, value: RV::SubCommand(args), .. }, ..] => {
+                    let mut iter = args.iter();
+                    let ids = parse_slash_arg!('match_slash, iter, "ids", &str);
+                    let amount = parse_slash_arg!('match_slash, iter, "amount", i64);
+                    exp::bestow::run_slash(bot, ids, amount).await.map_err(EventError::Slash)
+                },
+                _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
+            },
+            id::NAME => match options.as_slice() {
+                [RO { name: id::distribute::NAME, value: RV::SubCommand(args), .. }, ..] => {
+                    let mut iter = args.iter();
+                    let id = parse_slash_arg!('match_slash, iter, "id", &str);
+                    id::distribute::run_slash(bot, id).await.map_err(EventError::Slash)
+                },
+                _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
+            },
+            help::NAME => help::run_slash().await.map_err(EventError::Slash),
+            ping::NAME => ping::run_slash(ctx, slash).await.map_err(EventError::Slash),
+            _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
+        }
+    };
 
     let responses = execution_result?;
 

@@ -2,10 +2,10 @@ use crate::_prelude::*;
 
 pub const NAME: &str = "ping";
 pub const DESCRIPTION: &str = "Pong!";
-pub const NAME_LOCALIZED: &str = "ping";
-pub const DESCRIPTION_LOCALIZED: &str = "Pong!";
+pub const NAME_PT: &str = "ping";
+pub const DESCRIPTION_PT: &str = "Pong!";
 
-pub async fn run<'a>(ctx: &Context, slash: &CommandInteraction) -> Result<Vec<Response<'a>>> {
+pub async fn run_slash<'a>(ctx: &Context, slash: &CommandInteraction) -> Result<Vec<Response<'a>>> {
     let initial_point = Instant::now();
 
     slash

@@ -11,14 +11,10 @@ pub async fn run_component<'a>(bot: &impl AsBot, comp: &ComponentInteraction) ->
 
     let mut battle = battle_m.write().await;
 
-    let Moment::PrimaryAction { primary_action_tag, attacker_tag, target_tag } =
-        &battle.current_moment
-    else {
+    let Moment::PrimaryAction { primary_action_tag, attacker_tag, target_tag } = &battle.current_moment else {
         // Attack didn't start yet (receive action is not available)
         return Ok(Vec::new());
     };
-
-    let mut responses = vec![Response::update_delayless(request_reaction::disable_button(&comp.message, 0))];
 
     let mut blueprints = Vec::new();
 
@@ -27,16 +23,14 @@ pub async fn run_component<'a>(bot: &impl AsBot, comp: &ComponentInteraction) ->
     let attacker_m = Mirror::<Id>::get(bot, &attacker_tag).await?;
     let mut attacker = attacker_m.write().await;
 
-    blueprints.extend(crate::utils::execute_attack(primary_action_tag, &mut attacker, &mut target));
+    blueprints.extend(handler::execute_attack(primary_action_tag, &mut attacker, &mut target)?);
 
     mem::drop(target);
     mem::drop(attacker);
 
     battle.current_moment = Moment::None;
-    blueprints.extend(advance(bot, &mut battle).await?);
-    blueprints.push(battle.generate_turn_screen(bot).await?);
+    blueprints.extend(advance(bot, &mut battle).await.map_err(PrefixError::Core)?);
+    blueprints.push(battle.generate_turn_screen(bot).await.map_err(PrefixError::Core)?);
 
-    responses.push(Response::send_loose(blueprints));
-
-    Ok(responses)
+    Ok(vec![Response::send_loose(blueprints)])
 }

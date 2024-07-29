@@ -2,18 +2,18 @@ use crate::_prelude::*;
 
 pub const NAME: &str = "exp";
 pub const DESCRIPTION: &str = "About experience";
-pub const NAME_LOCALIZED: &str = "exp";
-pub const DESCRIPTION_LOCALIZED: &str = "Sobre experiência";
+pub const NAME_PT: &str = "exp";
+pub const DESCRIPTION_PT: &str = "Sobre experiência";
 
 pub fn register() -> CreateCommand<'static> {
     CreateCommand::new(NAME)
         .description(DESCRIPTION)
-        .name_localized("pt-BR", NAME_LOCALIZED)
+        .name_localized("pt-BR", NAME_PT)
         .description_localized("pt-BR", "Sobre experiência")
         .add_option(
             CreateCommandOption::new(CommandOptionType::SubCommand, bestow::NAME, bestow::DESCRIPTION)
-                .name_localized("pt-BR", bestow::NAME_LOCALIZED)
-                .description_localized("pt-BR", bestow::DESCRIPTION_LOCALIZED)
+                .name_localized("pt-BR", bestow::NAME_PT)
+                .description_localized("pt-BR", bestow::DESCRIPTION_PT)
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to bestow")
                         .name_localized("pt-BR", "ids")
@@ -21,8 +21,8 @@ pub fn register() -> CreateCommand<'static> {
                         .required(true),
                 )
                 .add_sub_option(
-                    CreateCommandOption::new(CommandOptionType::Integer, "value", "The amount to add")
-                        .name_localized("pt-BR", "valor")
+                    CreateCommandOption::new(CommandOptionType::Integer, "amount", "The amount to add")
+                        .name_localized("pt-BR", "quantia")
                         .description_localized("pt-BR", "Quantia a acrescentar")
                         .required(true),
                 ),
@@ -34,10 +34,10 @@ pub mod bestow {
 
     pub const NAME: &str = "bestow";
     pub const DESCRIPTION: &str = "Grant experience to the specified Ids";
-    pub const NAME_LOCALIZED: &str = "conceder";
-    pub const DESCRIPTION_LOCALIZED: &str = "Conceder experiência para os Ids especificados";
+    pub const NAME_PT: &str = "conceder";
+    pub const DESCRIPTION_PT: &str = "Conceder experiência para os Ids especificados";
 
-    pub async fn run<'a>(bot: &impl AsBot, (id_tags, value): (&str, i64)) -> Result<Vec<Response<'a>>> {
+    pub async fn run_slash<'a>(bot: &impl AsBot, id_tags: &str, value: i64) -> Result<Vec<Response<'a>>> {
         let mut blueprints = Vec::new();
 
         let mut id_ms = Vec::new();

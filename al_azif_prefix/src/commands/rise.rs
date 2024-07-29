@@ -3,14 +3,22 @@ use crate::_prelude::*;
 pub const NAME: &str = "rise";
 pub const NAME_PT: &str = "elevar";
 
-pub async fn run<'a>(bot: &impl AsBot, msg: &Message) -> Result<Responses<'a>> {
+pub async fn run_prefix<'a>(bot: &impl AsBot, msg: &Message) -> Result<Responses<'a>> {
     let Ok(battle_m) = Mirror::<Battle>::get(bot, msg.channel_id.to_string()).await else {
-        return Ok(response::simple_send_and_delete_with_original("Nenhuma batalha ocorrendo neste canal."));
+        let new_content = match bot.get_lang() {
+            Lang::En => "There is no battle in this channel.",
+            Lang::Pt => "Não há batalha neste canal.",
+        };
+        return Ok(response::simple_send_and_delete_with_original(new_content));
     };
     let mut battle = battle_m.write().await;
 
     let Moment::None = battle.current_moment else {
-        return Ok(response::simple_send_and_delete_with_original("Você não pode usar agora."));
+        let new_content = match bot.get_lang() {
+            Lang::En => "You can't use this command now.",
+            Lang::Pt => "Você não pode usar este comando agora.",
+        };
+        return Ok(response::simple_send_and_delete_with_original(new_content));
     };
 
     let user_m = Mirror::<Id>::get(bot, &battle.current_turn_owner_tag).await?;
