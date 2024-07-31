@@ -12,9 +12,7 @@ pub fn register() -> CreateCommand<'static> {
         .description_localized("pt-BR", DESCRIPTION_PT)
 }
 
-pub async fn run_slash<'a>() -> Result<Vec<Response<'a>>> {
-    Ok(vec![Response::send(vec![ResponseBlueprint::new().add_embed(embed_1())])])
-}
+pub async fn run_slash<'a>() -> Result<Vec<Response<'a>>> { Ok(vec![Response::send(vec![ResponseBlueprint::new().add_embed(embed_1())])]) }
 
 fn embed_1() -> CreateEmbed<'static> {
     use crate::commands::*;
@@ -40,10 +38,6 @@ fn embed_1() -> CreateEmbed<'static> {
             true,
         )
         .field("", fc!("**/{} {}**: {}", exp::NAME_PT, exp::bestow::NAME_PT, exp::bestow::DESCRIPTION_PT), true)
-        .field(
-            "",
-            fc!("**/{} {}**: {}", id::NAME_PT, id::distribute::NAME_PT, id::distribute::DESCRIPTION_PT),
-            true,
-        )
+        .field("", fc!("**/{} {}**: {}", id::NAME_PT, id::distribute::NAME_PT, id::distribute::DESCRIPTION_PT), true)
         .field("", fc!("**/{}**: {}", ping::NAME_PT, ping::DESCRIPTION_PT), true)
 }

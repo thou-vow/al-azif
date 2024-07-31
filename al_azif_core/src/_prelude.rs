@@ -1,9 +1,9 @@
 pub use crate::{
-    battle::{advance, Battle, Moment, Opponent},
+    battle::{Battle, Moment, Opponent},
     bot::{lang_diff, AsBot, InMemoryDatabase, Lang},
     constants::*,
     database::{self, Error as DatabaseError, Reflective},
-    effect::Effect,
+    effect::*,
     id::{Age, Gender, Id},
     mirror::{InMemoryStore, Mirror, ReadMirror, WriteMirror},
     player::Player,
@@ -21,18 +21,17 @@ pub use serde::{Deserialize, Serialize};
 pub use serenity::{
     async_trait,
     builder::{
-        CreateActionRow, CreateButton, CreateCommand, CreateCommandOption, CreateEmbed, CreateEmbedAuthor,
-        CreateEmbedFooter, CreateInteractionResponse, CreateInteractionResponseFollowup,
-        CreateInteractionResponseMessage, CreateMessage, CreateSelectMenu, CreateSelectMenuOption,
-        EditInteractionResponse,
+        CreateActionRow, CreateButton, CreateCommand, CreateCommandOption, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter,
+        CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage, CreateMessage, CreateSelectMenu,
+        CreateSelectMenuOption, EditInteractionResponse,
     },
     client::{Context, EventHandler},
     model::{
         application::{
-            ActionRow, ActionRowComponent, Button, ButtonKind, ButtonStyle, CommandInteraction, CommandOptionType,
-            ComponentInteraction, Interaction, ResolvedOption, ResolvedValue,
+            ActionRow, ActionRowComponent, Button, ButtonKind, ButtonStyle, CommandInteraction, CommandOptionType, ComponentInteraction,
+            Interaction, ResolvedOption, ResolvedValue,
         },
-        channel::{Channel, Embed, Message, ReactionType},
+        channel::{Channel, Embed, Message, ReactionConversionError, ReactionType},
         gateway::{GatewayIntents, Ready},
         guild::Guild,
         id::{ChannelId, GuildId, MessageId, UserId},

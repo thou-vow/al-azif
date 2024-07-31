@@ -19,6 +19,8 @@ pub enum Error {
     CouldNotCreateInteractionResponse(SerenityError),
     #[error("Could not edit response, why: {0}")]
     CouldNotEditInteractionResponse(SerenityError),
+    #[error("Failed to convert string to reaction type: {str}")]
+    FailedToConvertStringToReactionType { str: &'static str },
     #[error("Invalid invested attribute: {attribute_str}")]
     InvalidInvestedAttribute { attribute_str: FixedString },
 }

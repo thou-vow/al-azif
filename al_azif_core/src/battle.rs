@@ -26,6 +26,54 @@ impl Battle {
     }
 }
 impl Battle {
+    pub async fn advance<'a>(&mut self, bot: &impl AsBot) -> Result<Blueprints<'a>> {
+        let mut blueprints = Vec::new();
+
+        if let Some(current_turn_owner_tag) =
+            self.opponents.contains_key(&self.current_turn_owner_tag).then(|| self.current_turn_owner_tag.clone())
+        {
+            blueprints.extend(Mirror::<Id>::get(bot, &current_turn_owner_tag).await?.write().await.end_turn(bot, self).await?);
+            blueprints.push(ResponseBlueprint::new().set_content("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"));
+        }
+
+        loop {
+            let mut mov_values = Vec::new();
+            for id_tag in self.opponents.keys() {
+                let id_m = Mirror::<Id>::get(bot, id_tag).await?;
+                let id = id_m.read().await;
+                mov_values.push(id.movement);
+            }
+            self.turn_value_cap = *mov_values.iter().max_by(|x, y| x.cmp(y)).unwrap();
+
+            if let Some(next_turn_owner_tag) = self.get_next_turn_owner().map(FixedString::from_str_trunc) {
+                blueprints.extend(Mirror::<Id>::get(bot, &next_turn_owner_tag).await?.write().await.start_turn(self).await?);
+                self.turn_counter += 1;
+                self.current_turn_owner_tag = next_turn_owner_tag;
+                break;
+            }
+
+            self.phase_counter += 1;
+
+            blueprints.extend(self.start_next_phase(bot).await?);
+        }
+
+        Ok(blueprints)
+    }
+
+    async fn start_next_phase<'a>(&mut self, bot: &impl AsBot) -> Result<Blueprints<'a>> {
+        let mut blueprints = Vec::new();
+
+        for (id_tag, opponent) in &mut self.opponents {
+            let id_m = Mirror::<Id>::get(bot, id_tag).await?;
+            let id = id_m.read().await;
+            opponent.add_turn_value(id.movement);
+        }
+
+        blueprints.push(ResponseBlueprint::new().set_content("🚩 | Iniciando a próxima fase..."));
+
+        Ok(blueprints)
+    }
+
     pub async fn generate_turn_screen<'a>(&mut self, bot: &impl AsBot) -> Result<ResponseBlueprint<'a>> {
         let mut new_desc = String::new();
 
@@ -45,15 +93,19 @@ impl Battle {
             );
 
             if opponent.last_total_increased_turn_value_amount != 0 {
-                new_desc +=
-                    &f!(" *{}*", mark_thousands_and_show_sign(opponent.last_total_increased_turn_value_amount));
+                new_desc += &f!(" *{}*", mark_thousands_and_show_sign(opponent.last_total_increased_turn_value_amount));
                 opponent.last_total_increased_turn_value_amount = 0;
             }
 
             new_desc += "\n\n";
         }
 
-        let new_embed = CreateEmbed::default().title(f!("Fase {}", self.phase_counter)).description(new_desc);
+        let new_embed = CreateEmbed::default()
+            .author(CreateEmbedAuthor::new(lang_diff!(bot,
+                en: f!("Phase {}", self.phase_counter),
+                pt: f!("Fase {}", self.phase_counter)
+            )))
+            .description(new_desc);
 
         Ok(ResponseBlueprint::new().set_embeds(vec![new_embed]))
     }
@@ -102,63 +154,5 @@ impl Opponent {
 #[derive(Deserialize, Serialize)]
 pub enum Moment {
     None,
-    PrimaryAction {
-        primary_action_tag: FixedString,
-        attacker_tag:       FixedString,
-        target_tag:         FixedString,
-    },
-}
-
-pub async fn advance<'a>(bot: &impl AsBot, battle: &mut Battle) -> Result<Vec<ResponseBlueprint<'a>>> {
-    let mut blueprints = Vec::new();
-
-    if let Some(current_turn_owner_tag) = battle
-        .opponents
-        .contains_key(&battle.current_turn_owner_tag)
-        .then(|| battle.current_turn_owner_tag.clone())
-    {
-        blueprints
-            .extend(Mirror::<Id>::get(bot, &current_turn_owner_tag).await?.write().await.end_turn(battle).await?);
-        blueprints
-            .push(ResponseBlueprint::new().set_content("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"));
-    }
-
-    loop {
-        let mut mov_values = Vec::new();
-        for id_tag in battle.opponents.keys() {
-            let id_m = Mirror::<Id>::get(bot, id_tag).await?;
-            let id = id_m.read().await;
-            mov_values.push(id.movement);
-        }
-        battle.turn_value_cap = *mov_values.iter().max_by(|x, y| x.cmp(y)).unwrap();
-
-        if let Some(next_turn_owner_tag) = battle.get_next_turn_owner().map(FixedString::from_str_trunc) {
-            blueprints.extend(
-                Mirror::<Id>::get(bot, &next_turn_owner_tag).await?.write().await.start_turn(battle).await?,
-            );
-            battle.turn_counter += 1;
-            battle.current_turn_owner_tag = next_turn_owner_tag;
-            break;
-        }
-
-        battle.phase_counter += 1;
-
-        blueprints.extend(start_next_phase(bot, battle).await?);
-    }
-
-    Ok(blueprints)
-}
-
-pub async fn start_next_phase<'a>(bot: &impl AsBot, battle: &mut Battle) -> Result<Blueprints<'a>> {
-    let mut blueprints = Vec::new();
-
-    for (id_tag, opponent) in &mut battle.opponents {
-        let id_m = Mirror::<Id>::get(bot, id_tag).await?;
-        let id = id_m.read().await;
-        opponent.add_turn_value(id.movement);
-    }
-
-    blueprints.push(ResponseBlueprint::new().set_content("🚩 | Iniciando a próxima fase..."));
-
-    Ok(blueprints)
+    PrimaryAction { primary_action_tag: FixedString, attacker_tag: FixedString, target_tag: FixedString },
 }

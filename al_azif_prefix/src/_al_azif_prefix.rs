@@ -3,16 +3,13 @@
 pub mod commands {
     pub mod attack;
     pub mod block;
+    pub mod miracle;
     pub mod receive;
     pub mod rise;
     pub mod vital_trill;
 }
-pub mod common {
-    pub mod attack;
-}
 pub mod _prelude;
 pub mod handler;
-pub mod validate;
 
 use crate::_prelude::*;
 
@@ -20,6 +17,8 @@ use crate::_prelude::*;
 pub enum Error {
     #[error(transparent)]
     Core(#[from] CoreError),
+    #[error("Failed to convert string to reaction type: {str}")]
+    FailedToConvertStringToReactionType { str: &'static str },
     #[error("Invalid action tag: {action_tag}")]
     InvalidActionTag { action_tag: FixedString },
 }

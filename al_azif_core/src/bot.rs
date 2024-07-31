@@ -13,17 +13,9 @@ pub trait AsBot: AsRef<InMemoryStore<Battle>> + AsRef<InMemoryStore<Id>> + AsRef
 
                 let now = Instant::now();
 
-                cache
-                    .battles
-                    .lock()
-                    .await
-                    .retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
+                cache.battles.lock().await.retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
                 cache.ids.lock().await.retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
-                cache
-                    .players
-                    .lock()
-                    .await
-                    .retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
+                cache.players.lock().await.retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
             }
         });
     }

@@ -48,7 +48,10 @@ pub mod end {
     pub async fn run_slash<'a>(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Responses<'a>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return Ok(response::simple_send_and_delete("Não há uma batalha acontecendo neste canal."));
+            return Ok(response::simple_send_and_delete(lang_diff!(bot,
+                en: "No battle is currently happening in this channel.",
+                pt: "Não há uma batalha acontecendo neste canal."
+            )));
         };
 
         let battle = battle_m.read().await;
@@ -60,7 +63,10 @@ pub mod end {
 
         Mirror::<Battle>::cut(bot, &battle_tag).await?;
 
-        Ok(response::simple_send("Batalha finalizada."))
+        Ok(response::simple_send(lang_diff!(bot,
+            en: "Battle ended.",
+            pt: "Batalha encerrada."
+        )))
     }
 }
 
@@ -75,7 +81,10 @@ pub mod join {
     pub async fn run_slash<'a>(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Responses<'a>> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return Ok(response::simple_send("Não há uma batalha neste canal."));
+            return Ok(response::simple_send_and_delete(lang_diff!(bot,
+                en: "No battle is currently happening in this channel.",
+                pt: "Não há uma batalha acontecendo neste canal."
+            )));
         };
 
         let mut blueprints = Vec::new();
@@ -97,11 +106,16 @@ pub mod join {
 
         if !invalid_id_tags.is_empty() {
             let new_content = if invalid_id_tags.len() > 1 {
-                let concat_tags =
-                    join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
-                f!("Os Ids {concat_tags } não foram encontrados.")
+                let concat_tags = join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                lang_diff!(bot,
+                    en: f!("The Ids {concat_tags} were not found."),
+                    pt: f!("Os Ids {concat_tags} não foram encontrados.")
+                )
             } else {
-                f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
+                lang_diff!(bot,
+                    en: f!("The Id `{}` was not found.", invalid_id_tags.first().unwrap()),
+                    pt: f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap()
+                ))
             };
 
             return Ok(response::simple_send_and_delete(new_content));
@@ -109,12 +123,16 @@ pub mod join {
 
         if !already_in_battle_id_tags.is_empty() {
             let new_content = if already_in_battle_id_tags.len() > 1 {
-                let concat_tags = join_with_and(
-                    already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>(),
-                );
-                f!("Os Ids {concat_tags } já estão em batalha.")
+                let concat_tags = join_with_and(already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                lang_diff!(bot,
+                    en: f!("The Ids {concat_tags} are already in a battle."),
+                    pt: f!("Os Ids {concat_tags } já estão em batalha.")
+                )
             } else {
-                f!("O Id `{}` já está em batalha.", already_in_battle_id_tags.first().unwrap())
+                lang_diff!(bot,
+                    en: f!("The Id `{}` is already in a battle.", already_in_battle_id_tags.first().unwrap()),
+                    pt: f!("O Id `{}` já está em batalha.", already_in_battle_id_tags.first().unwrap())
+                )
             };
 
             return Ok(response::simple_send_and_delete(new_content));
@@ -129,11 +147,16 @@ pub mod join {
         }
 
         let content = if joined_id_names.len() > 1 {
-            let concat_names =
-                joined_id_names.iter().map(|name| f!("**{name}**")).collect::<Vec<String>>().join(", ");
-            f!("⚔️ | {concat_names} entraram na batalha.")
+            let concat_names = joined_id_names.iter().map(|name| f!("**{name}**")).collect::<Vec<String>>().join(", ");
+            lang_diff!(bot,
+                en: f!("⚔️ | {concat_names} joined the battle."),
+                pt: f!("⚔️ | {concat_names} entraram na batalha.")
+            )
         } else {
-            f!("⚔️ | **{}** entrou na batalha.", joined_id_names.first().unwrap())
+            lang_diff!(bot,
+                en: f!("⚔️ | **{}** joined the battle.", joined_id_names.first().unwrap()),
+                pt: f!("⚔️ | **{}** entrou na batalha.", joined_id_names.first().unwrap())
+            )
         };
 
         blueprints.push(ResponseBlueprint::new().set_content(content));
@@ -150,11 +173,7 @@ pub mod start {
     pub const NAME_PT: &str = "iniciar";
     pub const DESCRIPTION_PT: &str = "Iniciar uma batalha";
 
-    pub async fn run_slash<'a>(
-        bot: &impl AsBot,
-        slash: &CommandInteraction,
-        id_tags: &str,
-    ) -> Result<Vec<Response<'a>>> {
+    pub async fn run_slash<'a>(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Vec<Response<'a>>> {
         let battle_tag = slash.channel_id.to_string();
         if Mirror::<Battle>::get(bot, &battle_tag).await.is_ok() {
             return Ok(response::simple_send("Já está ocorrendo uma batalha neste canal."));
@@ -177,11 +196,16 @@ pub mod start {
 
         if !invalid_id_tags.is_empty() {
             let new_content = if invalid_id_tags.len() > 1 {
-                let concat_tags =
-                    join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<_>>());
-                f!("Os Ids {concat_tags } não foram encontrados.")
+                let concat_tags = join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                lang_diff!(bot,
+                    en: f!("The Ids {concat_tags} were not found."),
+                    pt: f!("Os Ids {concat_tags} não foram encontrados.")
+                )
             } else {
-                f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
+                lang_diff!(bot,
+                    en: f!("The Id `{}` was not found.", invalid_id_tags.first().unwrap()),
+                    pt: f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap()
+                ))
             };
 
             return Ok(response::simple_send_and_delete(new_content));
@@ -189,19 +213,26 @@ pub mod start {
 
         if !already_in_battle_id_tags.is_empty() {
             let new_content = if already_in_battle_id_tags.len() > 1 {
-                let concat_tags = join_with_and(
-                    already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>(),
-                );
-                f!("Os Ids {concat_tags } já estão em batalha.")
+                let concat_tags = join_with_and(already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                lang_diff!(bot,
+                    en: f!("The Ids {concat_tags} are already in a battle."),
+                    pt: f!("Os Ids {concat_tags } já estão em batalha.")
+                )
             } else {
-                f!("O Id `{}` já está em batalha.", already_in_battle_id_tags.first().unwrap())
+                lang_diff!(bot,
+                    en: f!("The Id `{}` is already in a battle.", already_in_battle_id_tags.first().unwrap()),
+                    pt: f!("O Id `{}` já está em batalha.", already_in_battle_id_tags.first().unwrap())
+                )
             };
 
             return Ok(response::simple_send_and_delete(new_content));
         }
 
         if id_ms.len() < 2 {
-            return Ok(response::simple_send_and_delete("Precisa de pelo menos 2 Ids para iniciar uma batalha."));
+            return Ok(response::simple_send_and_delete(lang_diff!(bot,
+                en: "You need at least 2 Ids to start a battle.",
+                pt: "Precisa de pelo menos 2 Ids para iniciar uma batalha."
+            )));
         }
 
         let mut blueprints = Vec::new();
@@ -211,7 +242,7 @@ pub mod start {
             id_m.write().await.join_battle(&mut battle).await;
         }
 
-        blueprints.extend(advance(bot, &mut battle).await?);
+        blueprints.extend(battle.advance(bot).await?);
         blueprints.push(battle.generate_turn_screen(bot).await?);
         Mirror::<Battle>::set_and_get(bot, battle).await?;
 

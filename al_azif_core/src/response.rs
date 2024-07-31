@@ -33,9 +33,7 @@ impl<'a> Response<'a> {
 
     pub fn send_loose(blueprints: Vec<ResponseBlueprint<'a>>) -> Self { Self::SendLoose { blueprints } }
 
-    pub fn send_loose_and_delete(blueprints: Vec<ResponseBlueprint<'a>>) -> Self {
-        Self::SendLooseAndDelete { blueprints }
-    }
+    pub fn send_loose_and_delete(blueprints: Vec<ResponseBlueprint<'a>>) -> Self { Self::SendLooseAndDelete { blueprints } }
 
     pub fn send_loose_and_delete_with_original(blueprints: Vec<ResponseBlueprint<'a>>) -> Vec<Self> {
         vec![Self::delete_original(), Self::send_loose_and_delete(blueprints)]
@@ -95,8 +93,7 @@ impl<'a> ResponseBlueprint<'a> {
     }
 
     pub fn create_message(&self) -> CreateMessage<'a> {
-        let mut into =
-            CreateMessage::new().embeds(self.new_embeds.clone()).components(self.new_components.clone());
+        let mut into = CreateMessage::new().embeds(self.new_embeds.clone()).components(self.new_components.clone());
 
         if let Some(new_content) = &self.new_content {
             into = into.content(new_content.clone());
@@ -107,20 +104,17 @@ impl<'a> ResponseBlueprint<'a> {
 }
 
 pub fn simple_send<'a>(new_content: impl Into<Cow<'a, str>>) -> Vec<Response<'a>> {
-    vec![Response::Send {
-        blueprints: vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }],
-    }]
+    vec![Response::Send { blueprints: vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }] }]
 }
 
 pub fn simple_send_and_delete<'a>(new_content: impl Into<Cow<'a, str>>) -> Vec<Response<'a>> {
-    vec![Response::SendAndDelete {
-        blueprints: vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }],
-    }]
+    vec![Response::SendAndDelete { blueprints: vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }] }]
 }
 
 pub fn simple_send_and_delete_with_original<'a>(new_content: impl Into<Cow<'a, str>>) -> Vec<Response<'a>> {
-    Response::send_and_delete_with_original(vec![ResponseBlueprint {
-        new_content: Some(new_content.into()),
-        ..Default::default()
-    }])
+    Response::send_and_delete_with_original(vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }])
+}
+
+pub fn simple_send_ephemeral<'a>(new_content: impl Into<Cow<'a, str>>) -> Vec<Response<'a>> {
+    vec![Response::SendEphemeral { blueprint: ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() } }]
 }

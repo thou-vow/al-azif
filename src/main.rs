@@ -21,10 +21,8 @@ fn main() {
 async fn try_main() -> Result<()> {
     config::load();
 
-    let intents = GatewayIntents::GUILDS
-        | GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::GUILD_VOICE_STATES
-        | GatewayIntents::MESSAGE_CONTENT;
+    let intents =
+        GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_VOICE_STATES | GatewayIntents::MESSAGE_CONTENT;
 
     let mut client = Client::builder(&config::get_bot_token()?, intents)
         .event_handler(Bot {

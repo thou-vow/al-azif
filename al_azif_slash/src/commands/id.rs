@@ -35,12 +35,10 @@ pub mod distribute {
             return Ok(response::simple_send_and_delete("Informe um Id válido."));
         };
 
-        let new_embed = generate_embed(&*id_m.read().await).await?;
-        let new_components = generate_attribute_components(id_tag).await?;
+        let new_embed = generate_embed(bot, &*id_m.read().await)?;
+        let new_components = generate_attribute_components(id_tag)?;
 
-        Ok(vec![Response::send(vec![ResponseBlueprint::new()
-            .add_embed(new_embed)
-            .set_components(new_components)])])
+        Ok(vec![Response::send(vec![ResponseBlueprint::new().add_embed(new_embed).set_components(new_components)])])
     }
 
     pub mod goto_attributes {
@@ -49,60 +47,45 @@ pub mod distribute {
         pub async fn run_component<'a>(bot: &impl AsBot, id_tag: &str) -> Result<Responses<'a>> {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
 
-            let new_embed = generate_embed(&*id_m.read().await).await?;
-            let new_components = generate_attribute_components(id_tag).await?;
+            let new_embed = generate_embed(bot, &*id_m.read().await)?;
+            let new_components = generate_attribute_components(id_tag)?;
 
-            Ok(vec![Response::update(
-                ResponseBlueprint::new().set_embeds(vec![new_embed]).set_components(new_components),
-            )])
+            Ok(vec![Response::update(ResponseBlueprint::new().set_embeds(vec![new_embed]).set_components(new_components))])
         }
     }
 
     pub mod goto_incrementors {
         use super::*;
 
-        pub async fn run_component<'a>(
-            bot: &impl AsBot,
-            id_tag: &str,
-            attribute_str: &str,
-        ) -> Result<Responses<'a>> {
+        pub async fn run_component<'a>(bot: &impl AsBot, id_tag: &str, attribute_str: &str) -> Result<Responses<'a>> {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
 
-            let new_embed = generate_embed(&*id_m.read().await).await?;
-            let new_components = generate_incrementor_components(id_tag, attribute_str).await?;
+            let new_embed = generate_embed(bot, &*id_m.read().await)?;
+            let new_components = generate_incrementor_components(id_tag, attribute_str)?;
 
-            Ok(vec![Response::update(
-                ResponseBlueprint::new().set_embeds(vec![new_embed]).set_components(new_components),
-            )])
+            Ok(vec![Response::update(ResponseBlueprint::new().set_embeds(vec![new_embed]).set_components(new_components))])
         }
     }
 
     pub mod invest_in {
         use super::*;
 
-        pub async fn run_component<'a>(
-            bot: &impl AsBot,
-            id_tag: &str,
-            attribute_str: &str,
-            selected_value: i64,
-        ) -> Result<Responses<'a>> {
+        pub async fn run_component<'a>(bot: &impl AsBot, id_tag: &str, attribute_str: &str, selected_value: i64) -> Result<Responses<'a>> {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
 
             let mut id = id_m.write().await;
-            invest(&mut id, attribute_str, selected_value).await?;
+            invest(&mut id, attribute_str, selected_value)?;
             let id = id.downgrade()?;
-            let new_embed = generate_embed(&id).await?;
+            let new_embed = generate_embed(bot, &id)?;
             mem::drop(id);
 
-            let new_components = generate_incrementor_components(id_tag, attribute_str).await?;
+            let new_components = generate_incrementor_components(id_tag, attribute_str)?;
 
-            Ok(vec![Response::update(
-                ResponseBlueprint::new().set_embeds(vec![new_embed]).set_components(new_components),
-            )])
+            Ok(vec![Response::update(ResponseBlueprint::new().set_embeds(vec![new_embed]).set_components(new_components))])
         }
     }
 
-    async fn invest(id: &mut Id, attribute_str: &str, selected_value: i64) -> Result<()> {
+    fn invest(id: &mut Id, attribute_str: &str, selected_value: i64) -> Result<()> {
         let spent = min(selected_value, id.points_to_distribute);
 
         match attribute_str {
@@ -113,11 +96,7 @@ pub mod distribute {
             "dex" => id.dexterity += spent,
             "cog" => id.cognition += spent,
             "cha" => id.charisma += spent,
-            _ => {
-                return Err(SlashError::InvalidInvestedAttribute {
-                    attribute_str: FixedString::from_str_trunc(attribute_str),
-                })
-            },
+            _ => return Err(SlashError::InvalidInvestedAttribute { attribute_str: FixedString::from_str_trunc(attribute_str) }),
         }
 
         id.points_to_distribute -= spent;
@@ -125,68 +104,73 @@ pub mod distribute {
         Ok(())
     }
 
-    async fn generate_embed<'a>(id: &Id) -> Result<CreateEmbed<'a>> {
+    fn generate_embed<'a>(bot: &impl AsBot, id: &Id) -> Result<CreateEmbed<'a>> {
         let mut attributes_field = String::new();
-        attributes_field += &f!("{CON_EMOJI} `{CON_SHORT}` {}\n", mark_thousands(id.constitution));
-        attributes_field += &f!("{SPR_EMOJI} `{SPR_SHORT}` {}\n", mark_thousands(id.spirit));
-        attributes_field += &f!("{MGT_EMOJI} `{MGT_SHORT}` {}\n", mark_thousands(id.might));
-        attributes_field += &f!("{MOV_EMOJI} `{MOV_SHORT}` {}\n", mark_thousands(id.movement));
-        attributes_field += &f!("{DEX_EMOJI} `{DEX_SHORT}` {}\n", mark_thousands(id.dexterity));
-        attributes_field += &f!("{COG_EMOJI} `{COG_SHORT}` {}\n", mark_thousands(id.cognition));
-        attributes_field += &f!("{CHA_EMOJI} `{CHA_SHORT}` {}\n", mark_thousands(id.charisma));
+        attributes_field += &f!("{CON_EMOJI} `{}` {}\n", lang_diff!(bot, en: CON_SHORT, pt: CON_SHORT_PT), mark_thousands(id.constitution));
+        attributes_field += &f!("{SPR_EMOJI} `{}` {}\n", lang_diff!(bot, en: SPR_SHORT, pt: SPR_SHORT_PT), mark_thousands(id.spirit));
+        attributes_field += &f!("{MGT_EMOJI} `{}` {}\n", lang_diff!(bot, en: MGT_SHORT, pt: MGT_SHORT_PT), mark_thousands(id.might));
+        attributes_field += &f!("{MOV_EMOJI} `{}` {}\n", lang_diff!(bot, en: MOV_SHORT, pt: MOV_SHORT_PT), mark_thousands(id.movement));
+        attributes_field += &f!("{DEX_EMOJI} `{}` {}\n", lang_diff!(bot, en: DEX_SHORT, pt: DEX_SHORT_PT), mark_thousands(id.dexterity));
+        attributes_field += &f!("{COG_EMOJI} `{}` {}\n", lang_diff!(bot, en: COG_SHORT, pt: COG_SHORT_PT), mark_thousands(id.cognition));
+        attributes_field += &f!("{CHA_EMOJI} `{}` {}\n", lang_diff!(bot, en: CHA_SHORT, pt: CHA_SHORT_PT), mark_thousands(id.charisma));
 
         let new_embed = CreateEmbed::new()
             .title(f!("{} 🎊 [{}]", id.name, mark_thousands(id.lvl)))
             .color(id.color.unwrap_or(0x36393e))
             .description(f!("{} / {}", mark_thousands(id.xp), mark_thousands(xp_to_next_level(id.lvl))))
             .field("", attributes_field, false)
-            .footer(CreateEmbedFooter::new(f!(
-                "{} pontos para distribuir.",
-                mark_thousands(id.points_to_distribute)
-            )));
+            .footer(CreateEmbedFooter::new(lang_diff!(bot,
+                en: f!("{} points to distribute.", mark_thousands(id.points_to_distribute)),
+                pt: f!("{} pontos para distribuir.", mark_thousands(id.points_to_distribute)
+            ))));
 
         Ok(new_embed)
     }
 
-    async fn generate_attribute_components<'a>(id_tag: &str) -> Result<Vec<CreateActionRow<'a>>> {
+    fn generate_attribute_components<'a>(id_tag: &str) -> Result<Vec<CreateActionRow<'a>>> {
         let row_1 = CreateActionRow::Buttons(vec![
-            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} con"))
-                .emoji(ReactionType::Unicode(CON_EMOJI.parse().unwrap())),
-            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} spr"))
-                .emoji(ReactionType::Unicode(SPR_EMOJI.parse().unwrap())),
-            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} mgt"))
-                .emoji(ReactionType::Unicode(MGT_EMOJI.parse().unwrap())),
-            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} mov"))
-                .emoji(ReactionType::Unicode(MOV_EMOJI.parse().unwrap())),
+            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} con")).emoji(ReactionType::Unicode(
+                CON_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: CON_EMOJI })?,
+            )),
+            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} spr")).emoji(ReactionType::Unicode(
+                SPR_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: SPR_EMOJI })?,
+            )),
+            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} mgt")).emoji(ReactionType::Unicode(
+                MGT_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: MGT_EMOJI })?,
+            )),
+            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} mov")).emoji(ReactionType::Unicode(
+                MOV_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: MOV_EMOJI })?,
+            )),
         ]);
 
         let row_2 = CreateActionRow::Buttons(vec![
-            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} dex"))
-                .emoji(ReactionType::Unicode(DEX_EMOJI.parse().unwrap())),
-            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} cog"))
-                .emoji(ReactionType::Unicode(COG_EMOJI.parse().unwrap())),
-            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} cha"))
-                .emoji(ReactionType::Unicode(CHA_EMOJI.parse().unwrap())),
+            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} dex")).emoji(ReactionType::Unicode(
+                DEX_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: DEX_EMOJI })?,
+            )),
+            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} cog")).emoji(ReactionType::Unicode(
+                COG_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: COG_EMOJI })?,
+            )),
+            CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} cha")).emoji(ReactionType::Unicode(
+                CHA_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: CHA_EMOJI })?,
+            )),
         ]);
 
         Ok(vec![row_1, row_2])
     }
 
-    async fn generate_incrementor_components<'a>(
-        id_tag: &str,
-        attribute_str: &str,
-    ) -> Result<Vec<CreateActionRow<'a>>> {
+    fn generate_incrementor_components<'a>(id_tag: &str, attribute_str: &str) -> Result<Vec<CreateActionRow<'a>>> {
         let custom_button_id_lead = f!("#slash id distribute invest_in {id_tag} {attribute_str} ");
 
-        let button_1 = CreateButton::new(f!("{custom_button_id_lead}1")).label("+1");
-        let button_4 = CreateButton::new(f!("{custom_button_id_lead}4")).label("+4");
-        let button_10 = CreateButton::new(f!("{custom_button_id_lead}10")).label("+10");
-        let button_100000 = CreateButton::new(f!("{custom_button_id_lead}100000")).label("+100000");
+        let new_button_1 = CreateButton::new(f!("{custom_button_id_lead}1")).label("+1");
+        let new_button_4 = CreateButton::new(f!("{custom_button_id_lead}4")).label("+4");
+        let new_button_10 = CreateButton::new(f!("{custom_button_id_lead}10")).label("+10");
+        let new_button_100000 = CreateButton::new(f!("{custom_button_id_lead}100000")).label("+100000");
 
-        let button_go_back = CreateButton::new(f!("#slash id distribute goto_attributes {id_tag}"))
-            .emoji(ReactionType::Unicode(GO_BACK_EMOJI.parse().unwrap()));
+        let new_button_go_back = CreateButton::new(f!("#slash id distribute goto_attributes {id_tag}")).emoji(ReactionType::Unicode(
+            GO_BACK_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: GO_BACK_EMOJI })?,
+        ));
 
-        let row_1 = CreateActionRow::Buttons(vec![button_1, button_4, button_10, button_100000, button_go_back]);
+        let row_1 = CreateActionRow::Buttons(vec![new_button_1, new_button_4, new_button_10, new_button_100000, new_button_go_back]);
 
         Ok(vec![row_1])
     }

@@ -1,4 +1,4 @@
-use crate::_prelude::*;
+use crate::{_prelude::*, effect};
 
 #[derive(Deserialize, Serialize)]
 pub struct Id {
@@ -77,39 +77,94 @@ impl Id {
         Ok(blueprints)
     }
 
-    pub async fn end_turn<'a>(&mut self, battle: &mut Battle) -> Result<Blueprints<'a>> {
+    pub async fn end_turn<'a>(&mut self, bot: &impl AsBot, battle: &mut Battle) -> Result<Blueprints<'a>> {
         let mut blueprints = Vec::new();
 
         battle.opponents.get_mut(&self.tag).unwrap().sub_turn_value(battle.turn_value_cap);
 
         blueprints.push(ResponseBlueprint::new().set_content(f!("🏁 | Fim do turno de **{}**.", self.name)));
-        blueprints.extend(self.effects_on_turn_end(battle));
+        blueprints.extend(self.effects_on_turn_end(bot, battle));
 
         Ok(blueprints)
     }
 
-    pub fn take_damage<'a>(&mut self, mut damage: i64) -> Blueprints<'a> {
+    pub fn acquire_effect<'a>(&mut self, bot: &impl AsBot, new_effect: impl AsEffect) -> Blueprints<'a> {
         let mut blueprints = Vec::new();
-        (damage, blueprints) = self.effects_on_take_damage(damage);
 
-        let previous_hp = self.hp;
-        self.hp = (self.hp - damage).clamp(0, self.hp);
+        if let Some(acquire_effect_text) = new_effect.acquire_effect_text(bot, &self.name) {
+            blueprints.push(ResponseBlueprint::new().set_content(acquire_effect_text));
+        }
 
-        blueprints.push(ResponseBlueprint::new().set_content(f!(
-            "{STRIKE_EMOJI} | **{}** recebeu **{}** de dano. [{HP_SHORT}: **{}** → **{}**]",
-            self.name,
-            mark_thousands(damage),
-            mark_thousands(previous_hp),
-            mark_thousands(self.hp),
-        )));
+        self.effects.push_back(new_effect.into());
 
         blueprints
     }
 
-    pub fn acquire_effect<'a>(&mut self, new_effect: Effect) -> Blueprints<'a> {
+    pub fn receive_damage<'a>(&mut self, bot: &impl AsBot, damage: i64) -> Blueprints<'a> {
+        let mut blueprints = Vec::new();
+        let mut cursor = self.effects.cursor_front_mut();
+
+        // TODO: for shield absorption
+
+        blueprints.extend(self.lose_health(bot, damage));
+
+        blueprints
+    }
+
+    pub fn lose_health<'a>(&mut self, bot: &impl AsBot, amount: i64) -> Blueprints<'a> {
         let mut blueprints = Vec::new();
 
-        self.effects.push_back(new_effect);
+        let previous_hp = self.hp;
+        self.hp = (self.hp - amount).clamp(0, self.hp);
+
+        blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
+            en: f!("{CON_EMOJI} | {HP_SHORT}: {previous_hp} → {}", self.hp),
+            pt: f!("{CON_EMOJI} | {HP_SHORT_PT}: {previous_hp} → {}", self.hp)
+        )));
+
+        if self.hp == 0 {
+            blueprints.extend(self.faint(bot));
+        }
+
+        // Todo: Effects after losing HP
+
+        blueprints
+    }
+
+    pub fn restore_health<'a>(&mut self, bot: &impl AsBot, amount: i64) -> Blueprints<'a> {
+        let mut blueprints = Vec::new();
+
+        let previous_hp = self.hp;
+        self.hp = (self.hp + amount).clamp(0, self.hp);
+
+        blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
+            en: f!("{CON_EMOJI} | {HP_SHORT}: {previous_hp} → {}", self.hp),
+            pt: f!("{CON_EMOJI} | {HP_SHORT_PT}: {previous_hp} → {}", self.hp)
+        )));
+
+        // Todo: Effects after restoring HP
+
+        blueprints
+    }
+
+    pub fn faint<'a>(&mut self, bot: &impl AsBot) -> Blueprints<'a> {
+        let mut blueprints = self.acquire_effect(bot, FaintEffect);
+
+        blueprints.extend(self.effects_on_fainting(bot));
+
+        // Lose Faint effect if alive somehow after effects
+        if self.hp > 0 {
+            let mut cursor = self.effects.cursor_back_mut();
+            while let Some(effect) = cursor.current() {
+                match effect {
+                    Effect::Faint(_) => {
+                        cursor.remove_current();
+                        break;
+                    },
+                    _ => cursor.move_next(),
+                }
+            }
+        }
 
         blueprints
     }
@@ -120,8 +175,8 @@ impl Id {
 
         for effect in self.effects.iter() {
             match effect {
-                Effect::Rise { might_bonus, .. } => {
-                    bonuses += *might_bonus;
+                Effect::Rise(rise) => {
+                    bonuses += rise.might_bonus;
                 },
                 _ => (),
             }
@@ -130,73 +185,164 @@ impl Id {
         bonuses
     }
 
-    pub fn effects_on_take_damage<'a>(&mut self, mut damage: i64) -> (i64, Blueprints<'a>) {
+    pub fn effects_on_turn_end<'a>(&mut self, bot: &impl AsBot, _battle: &mut Battle) -> Blueprints<'a> {
         let mut blueprints = Vec::new();
         let mut cursor = self.effects.cursor_front_mut();
 
+        let mut acting_effects = Vec::new();
+
         while let Some(effect) = cursor.current() {
+            let mut remove_effect = false;
+
             match effect {
-                Effect::Block => {
-                    damage /= 2;
-                    cursor.remove_current();
-                    continue;
+                Effect::Bleed(bleed) => {
+                    acting_effects.push(Effect::Bleed(bleed.clone()));
+
+                    if bleed.turn_duration <= 0 {
+                        remove_effect = true;
+                    } else {
+                        bleed.turn_duration -= 1;
+                    }
+                },
+                Effect::Rise(rise) => {
+                    acting_effects.push(Effect::Rise(rise.clone()));
+
+                    if rise.turn_duration <= 0 {
+                        remove_effect = true;
+                    } else {
+                        rise.turn_duration -= 1;
+                    }
                 },
                 _ => (),
             }
 
-            cursor.move_next();
+            if remove_effect {
+                cursor.remove_current();
+            } else {
+                cursor.move_next();
+            }
         }
 
-        (damage, blueprints)
+        for effect in acting_effects {
+            match effect {
+                Effect::Bleed(bleed) => {
+                    blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
+                        en: f!("{} | **{}** received **{}** damage due to the **{}** effect.",
+                            BleedEffect::EMOJI,
+                            self.name,
+                            mark_thousands(bleed.damage_over_turn),
+                            BleedEffect::NAME,
+                        ),
+                        pt: f!("{} | **{}** recebeu **{}** de dano devido ao efeito **{}**.",
+                            BleedEffect::EMOJI,
+                            self.name,
+                            mark_thousands(bleed.damage_over_turn),
+                            BleedEffect::NAME_PT,
+                        )
+                    )));
+                    blueprints.extend(self.receive_damage(bot, bleed.damage_over_turn));
+
+                    if bleed.turn_duration <= 0 {
+                        blueprints.push(ResponseBlueprint::new().set_content(bleed.lose_effect_text(bot, &self.name).unwrap()));
+                    }
+                },
+                Effect::Rise(rise) => {
+                    if rise.turn_duration <= 0 {
+                        blueprints.push(ResponseBlueprint::new().set_content(rise.lose_effect_text(bot, &self.name).unwrap()));
+                    }
+                },
+                _ => (),
+            }
+        }
+
+        blueprints
     }
 
-    pub fn effects_on_turn_end<'a>(&mut self, _battle: &mut Battle) -> Blueprints<'a> {
-        let mut blueprints = Vec::new();
-        let mut cursor = self.effects.cursor_front_mut();
+    pub fn effects_when_attacking_with_primary_action<'a>(
+        &mut self,
+        bot: &impl AsBot,
+        mut damage: i64,
+        target: &mut Id,
+    ) -> (i64, Blueprints<'a>) {
+        let mut _blueprints = Vec::new();
+        let mut _cursor = self.effects.cursor_front_mut();
+
+        let mut cursor = target.effects.cursor_front_mut();
+        let mut acting_effects = Vec::new();
 
         while let Some(effect) = cursor.current() {
-            match effect {
-                Effect::Bleed { damage_over_turn, turn_duration } => {
-                    let previous_hp = self.hp;
-                    self.hp -= *damage_over_turn;
-                    blueprints.push(ResponseBlueprint::new().set_content(f!(
-                        "💔 | **{}** sofreu **{}** de dano devido ao efeito **Sangramento**. [{HP_SHORT}: **{}** \
-                         → **{}**]",
-                        self.name,
-                        mark_thousands(*damage_over_turn),
-                        mark_thousands(previous_hp),
-                        mark_thousands(self.hp),
-                    )));
+            let mut remove_effect = false;
 
-                    if *turn_duration <= 0 {
-                        blueprints.push(
-                            ResponseBlueprint::new()
-                                .set_content(f!("💔 | **{}** perdeu o efeito **Sangramento**.", self.name,)),
-                        );
-                        cursor.remove_current();
-                        continue;
-                    } else {
-                        *turn_duration -= 1;
-                    }
-                },
-                Effect::Rise { might_bonus, turn_duration } => {
-                    if *turn_duration <= 0 {
-                        blueprints.push(ResponseBlueprint::new().set_content(f!(
-                            "💪 | **{}** perdeu o efeito **Subir**. [**{}** {MGT_EMOJI}]",
-                            self.name,
-                            mark_thousands_and_show_sign(*might_bonus * -1),
-                        )));
-                        cursor.remove_current();
-                        continue;
-                    } else {
-                        *turn_duration -= 1;
-                    }
+            match effect {
+                Effect::Block(block) => {
+                    acting_effects.push(Effect::Block(block.clone()));
+                    remove_effect = true;
                 },
                 _ => (),
             }
 
-            cursor.move_next();
+            if remove_effect {
+                cursor.remove_current();
+            } else {
+                cursor.move_next();
+            }
         }
+
+        for effect in acting_effects {
+            match effect {
+                Effect::Block(_) => {
+                    damage /= 2;
+                },
+                _ => (),
+            }
+        }
+
+        (damage, _blueprints)
+    }
+
+    pub fn effects_on_fainting<'a>(&mut self, bot: &impl AsBot) -> Blueprints<'a> {
+        let mut blueprints = Vec::new();
+        let mut cursor = self.effects.cursor_front_mut();
+
+        let mut acting_effects = Vec::new();
+
+        while let Some(effect) = cursor.current() {
+            let mut remove_effect = false;
+
+            match effect {
+                Effect::Miracle(miracle) => {
+                    acting_effects.push(miracle.clone());
+
+                    remove_effect = true;
+                },
+                _ => (),
+            }
+
+            if remove_effect {
+                cursor.remove_current();
+            } else {
+                cursor.move_next();
+            }
+        }
+
+        for effect in acting_effects {
+            blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
+                en: f!("{} | **{}** restored **1** {HP_SHORT} due to the **{}** effect.",
+                    MiracleEffect::EMOJI,
+                    self.name,
+                    MiracleEffect::NAME,
+                ),
+                pt: f!("{} | **{}** restaurou **1** {HP_SHORT_PT} devido ao efeito **{}**.",
+                    MiracleEffect::EMOJI,
+                    self.name,
+                    MiracleEffect::NAME_PT,
+                )
+            )));
+            blueprints.extend(self.restore_health(bot, 1));
+            blueprints.push(ResponseBlueprint::new().set_content(effect.lose_effect_text(bot, &self.name).unwrap()));
+        }
+
+        // Todo: Loose effects if still down
 
         blueprints
     }

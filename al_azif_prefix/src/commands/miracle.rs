@@ -1,7 +1,7 @@
 use crate::_prelude::*;
 
-pub const NAME: &str = "rise";
-pub const NAME_PT: &str = "elevar";
+pub const NAME: &str = "miracle";
+pub const NAME_PT: &str = "milagre";
 
 pub async fn run_prefix<'a>(bot: &impl AsBot, msg: &Message) -> Result<Responses<'a>> {
     let (battle_m, user_m) = {
@@ -43,9 +43,7 @@ async fn main_logic<'a>(bot: &impl AsBot, battle_m: Mirror<Battle>, user_m: Mirr
     let mut _battle = battle_m.write().await;
     let mut user = user_m.write().await;
 
-    let might_bonus = user.might / 2;
-
-    blueprints.extend(user.acquire_effect(bot, RiseEffect { might_bonus, turn_duration: 1 }));
+    blueprints.extend(user.acquire_effect(bot, MiracleEffect));
 
     Ok(blueprints)
 }

@@ -66,6 +66,9 @@ impl<T: Reflective> Clone for Mirror<T> {
 pub struct ReadMirror<'a, T: Reflective> {
     guard: RwLockReadGuard<'a, T>,
 }
+impl<'a, T: Reflective> ReadMirror<'a, T> {
+    pub fn unread(self) {}
+}
 impl<'a, T: Reflective> Deref for ReadMirror<'a, T> {
     type Target = T;
 
@@ -83,6 +86,8 @@ impl<'a, T: Reflective> WriteMirror<'a, T> {
 
         Ok(ReadMirror { guard })
     }
+
+    pub fn unwrite(self) {}
 }
 impl<'a, T: Reflective> Deref for WriteMirror<'a, T> {
     type Target = T;

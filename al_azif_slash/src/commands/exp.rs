@@ -53,11 +53,16 @@ pub mod bestow {
 
         if !invalid_id_tags.is_empty() {
             let new_content = if invalid_id_tags.len() > 1 {
-                let concat_tags =
-                    join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
-                f!("Os Ids {concat_tags } não foram encontrados.")
+                let concat_tags = join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                lang_diff!(bot,
+                    en: f!("The Ids {concat_tags} were not found."),
+                    pt: f!("Os Ids {concat_tags} não foram encontrados.")
+                )
             } else {
-                f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap())
+                lang_diff!(bot,
+                    en: f!("The Id `{}` was not found.", invalid_id_tags.first().unwrap()),
+                    pt: f!("O Id `{}` não foi encontrado.", invalid_id_tags.first().unwrap()
+                ))
             };
 
             return Ok(response::simple_send_and_delete(new_content));
@@ -84,14 +89,9 @@ pub mod bestow {
                     mark_thousands(previous_lvl),
                     mark_thousands(id.lvl)
                 );
-                new_content.push_str(&f!(
-                    "Pode distribuir **{}** pontos nos atributos.",
-                    mark_thousands(id.points_to_distribute)
-                ));
-                new_content.push_str(&f!(
-                    "Falta **{}** de experiência para o próximo nível.",
-                    mark_thousands(xp_to_next_level(id.lvl) - id.xp)
-                ));
+                new_content.push_str(&f!("Pode distribuir **{}** pontos nos atributos.", mark_thousands(id.points_to_distribute)));
+                new_content
+                    .push_str(&f!("Falta **{}** de experiência para o próximo nível.", mark_thousands(xp_to_next_level(id.lvl) - id.xp)));
 
                 blueprints.push(ResponseBlueprint::new().set_content(new_content));
             } else {

@@ -143,11 +143,7 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) ->
     perform_response_responses(ctx, slash, responses).await
 }
 
-pub async fn perform_response_responses<'a>(
-    ctx: &Context,
-    slash: &CommandInteraction,
-    responses: Responses<'a>,
-) -> Result<()> {
+pub async fn perform_response_responses<'a>(ctx: &Context, slash: &CommandInteraction, responses: Responses<'a>) -> Result<()> {
     let mut msgs_to_delete = Vec::new();
 
     for response in responses {
@@ -159,12 +155,11 @@ pub async fn perform_response_responses<'a>(
                 };
 
                 slash
-                    .create_response(
-                        &ctx.http,
-                        CreateInteractionResponse::Message(first_blueprint.create_interaction_response_message()),
-                    )
+                    .create_response(&ctx.http, CreateInteractionResponse::Message(first_blueprint.create_interaction_response_message()))
                     .await
                     .map_err(EventError::CouldNotCreateInteractionResponse)?;
+
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
 
                 for blueprint in blueprints.iter().skip(1) {
                     slash
@@ -172,6 +167,8 @@ pub async fn perform_response_responses<'a>(
                         .send_message(&ctx.http, blueprint.create_message())
                         .await
                         .map_err(EventError::CouldNotSendMessage)?;
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             Response::SendAndDelete { blueprints } => {
@@ -180,10 +177,7 @@ pub async fn perform_response_responses<'a>(
                 };
 
                 slash
-                    .create_response(
-                        &ctx.http,
-                        CreateInteractionResponse::Message(first_blueprint.create_interaction_response_message()),
-                    )
+                    .create_response(&ctx.http, CreateInteractionResponse::Message(first_blueprint.create_interaction_response_message()))
                     .await
                     .map_err(EventError::CouldNotCreateInteractionResponse)?;
                 msgs_to_delete.push(
@@ -193,6 +187,8 @@ pub async fn perform_response_responses<'a>(
                         .map_err(EventError::CouldNotGetOriginalInteractionResponse)?,
                 );
 
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
+
                 for blueprint in blueprints.iter().skip(1) {
                     msgs_to_delete.push(
                         slash
@@ -201,18 +197,20 @@ pub async fn perform_response_responses<'a>(
                             .await
                             .map_err(EventError::CouldNotSendMessage)?,
                     );
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             Response::SendEphemeral { blueprint } => {
                 slash
                     .create_response(
                         &ctx.http,
-                        CreateInteractionResponse::Message(
-                            blueprint.create_interaction_response_message().ephemeral(true),
-                        ),
+                        CreateInteractionResponse::Message(blueprint.create_interaction_response_message().ephemeral(true)),
                     )
                     .await
                     .map_err(EventError::CouldNotCreateInteractionResponse)?;
+
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
             },
             Response::SendLoose { blueprints } => {
                 for blueprint in blueprints {
@@ -221,6 +219,8 @@ pub async fn perform_response_responses<'a>(
                         .send_message(&ctx.http, blueprint.create_message())
                         .await
                         .map_err(EventError::CouldNotSendMessage)?;
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             Response::SendLooseAndDelete { blueprints } => {
@@ -232,6 +232,8 @@ pub async fn perform_response_responses<'a>(
                             .await
                             .map_err(EventError::CouldNotSendMessage)?,
                     );
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             Response::Update { .. } => (),

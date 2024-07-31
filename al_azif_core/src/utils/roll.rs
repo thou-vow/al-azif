@@ -61,17 +61,13 @@ impl RollSummary {
             return block;
         };
         match first_value {
-            RollSummaryValue::Selected(num) => {
-                block.push_str(&f!("\u{001b}[1;31m{}\u{001b}[0m", mark_thousands(*num)))
-            },
+            RollSummaryValue::Selected(num) => block.push_str(&f!("\u{001b}[1;31m{}\u{001b}[0m", mark_thousands(*num))),
             RollSummaryValue::NotSelected(num) => block.push_str(&mark_thousands(*num)),
         }
 
         for value in self.values.iter().skip(1) {
             match value {
-                RollSummaryValue::Selected(num) => {
-                    block.push_str(&f!("\u{001b}[1;31m{}\u{001b}[0m", mark_thousands(*num)))
-                },
+                RollSummaryValue::Selected(num) => block.push_str(&f!("\u{001b}[1;31m{}\u{001b}[0m", mark_thousands(*num))),
                 RollSummaryValue::NotSelected(num) => block.push_str(&mark_thousands(*num)),
             }
         }
@@ -89,17 +85,13 @@ impl RollSummary {
             return block;
         };
         match first_value {
-            RollSummaryValue::Selected(num) => {
-                block.push_str(&f!("\u{001b}[1;32m{}\u{001b}[0m", mark_thousands(*num)))
-            },
+            RollSummaryValue::Selected(num) => block.push_str(&f!("\u{001b}[1;32m{}\u{001b}[0m", mark_thousands(*num))),
             RollSummaryValue::NotSelected(num) => block.push_str(&mark_thousands(*num)),
         }
 
         for value in self.values.iter().skip(1) {
             match value {
-                RollSummaryValue::Selected(num) => {
-                    block.push_str(&f!(", \u{001b}[1;32m{}\u{001b}[0m", mark_thousands(*num)))
-                },
+                RollSummaryValue::Selected(num) => block.push_str(&f!(", \u{001b}[1;32m{}\u{001b}[0m", mark_thousands(*num))),
                 RollSummaryValue::NotSelected(num) => block.push_str(&f!(", {}", mark_thousands(*num))),
             }
         }

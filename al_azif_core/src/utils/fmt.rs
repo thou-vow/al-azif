@@ -27,9 +27,7 @@ pub fn mark_thousands_and_show_sign(num: i64) -> String {
     formatted_num
 }
 
-pub fn join_with_and(words: Vec<impl AsRef<str>>) -> String {
-    _join_with_and(words.iter().map(|word| word.as_ref()).collect())
-}
+pub fn join_with_and(words: Vec<impl AsRef<str>>) -> String { _join_with_and(words.iter().map(|word| word.as_ref()).collect()) }
 fn _join_with_and(words: Vec<&str>) -> String {
     let len = words.len();
     match len {

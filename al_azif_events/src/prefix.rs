@@ -11,11 +11,10 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Result<()> {
     };
 
     let execution_result = match name.to_lowercase().as_str() {
-        attack::NAME | attack::NAME_PT => {
-            attack::run_prefix(bot, msg, &args.collect::<Vec<&str>>()).await.map_err(EventError::Prefix)
-        },
+        attack::NAME | attack::NAME_PT => attack::run_prefix(bot, msg, &args.collect::<Vec<&str>>()).await.map_err(EventError::Prefix),
         block::NAME | block::NAME_PT => block::run_prefix(bot, msg).await.map_err(EventError::Prefix),
-        /* receive::NAME | receive::NAME_PT => receive::run(bot, msg).await.map_err(EventError::Prefix), */
+        miracle::NAME | miracle::NAME_PT => miracle::run_prefix(bot, msg).await.map_err(EventError::Prefix),
+        receive::NAME | receive::NAME_PT => receive::run_prefix(bot, msg).await.map_err(EventError::Prefix),
         rise::NAME | rise::NAME_PT => rise::run_prefix(bot, msg).await.map_err(EventError::Prefix),
         vital_trill::NAME | vital_trill::NAME_PT => {
             vital_trill::run_prefix(bot, msg, &args.collect::<Vec<&str>>()).await.map_err(EventError::Prefix)
@@ -28,11 +27,7 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Result<()> {
     perform_response_responses(ctx, msg, responses).await
 }
 
-pub async fn perform_response_responses<'a>(
-    ctx: &Context,
-    msg: &Message,
-    responses: Vec<Response<'a>>,
-) -> Result<()> {
+pub async fn perform_response_responses<'a>(ctx: &Context, msg: &Message, responses: Vec<Response<'a>>) -> Result<()> {
     let mut delete_original = false;
     let mut msgs_to_delete = Vec::new();
 
@@ -49,11 +44,15 @@ pub async fn perform_response_responses<'a>(
                     .await
                     .map_err(EventError::CouldNotSendMessage)?;
 
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
+
                 for blueprint in blueprints.iter().skip(1) {
                     msg.channel_id
                         .send_message(&ctx.http, blueprint.create_message())
                         .await
                         .map_err(EventError::CouldNotSendMessage)?;
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             Response::SendAndDelete { blueprints } => {
@@ -68,6 +67,8 @@ pub async fn perform_response_responses<'a>(
                         .map_err(EventError::CouldNotSendMessage)?,
                 );
 
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
+
                 for blueprint in blueprints.iter().skip(1) {
                     msgs_to_delete.push(
                         msg.channel_id
@@ -75,6 +76,8 @@ pub async fn perform_response_responses<'a>(
                             .await
                             .map_err(EventError::CouldNotSendMessage)?,
                     );
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             Response::SendEphemeral { .. } => (),
@@ -84,6 +87,8 @@ pub async fn perform_response_responses<'a>(
                         .send_message(&ctx.http, blueprint.create_message())
                         .await
                         .map_err(EventError::CouldNotSendMessage)?;
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             Response::SendLooseAndDelete { blueprints } => {
@@ -94,6 +99,8 @@ pub async fn perform_response_responses<'a>(
                             .await
                             .map_err(EventError::CouldNotSendMessage)?,
                     );
+
+                    tokio::time::sleep(RESPONSE_INTERVAL).await;
                 }
             },
             Response::Update { .. } => (),
