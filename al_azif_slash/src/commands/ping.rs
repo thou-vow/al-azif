@@ -5,7 +5,7 @@ pub const DESCRIPTION: &str = "Pong!";
 pub const NAME_PT: &str = "ping";
 pub const DESCRIPTION_PT: &str = "Pong!";
 
-pub async fn run_slash<'a>(ctx: &Context, slash: &CommandInteraction) -> Result<Vec<Response<'a>>> {
+pub async fn run_slash(ctx: &Context, slash: &CommandInteraction) -> Result<Vec<Response>> {
     let initial_point = Instant::now();
 
     slash

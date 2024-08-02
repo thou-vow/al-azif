@@ -1,16 +1,20 @@
 use crate::_prelude::*;
 
-pub fn execute_attack<'a>(bot: &impl AsBot, action_tag: &str, attacker: &mut Id, target: &mut Id) -> Result<Blueprints<'a>> {
+pub fn execute_primary_action(bot: &impl AsBot, action_tag: &str, emitter: &mut Id, target: &mut Id) -> Result<Blueprints> {
     use crate::commands::*;
-    let blueprints = match action_tag {
-        "attack" => attack::execute(bot, attacker, target),
-        "vital_trill" => vital_trill::execute(bot, attacker, target),
+    let mut blueprints = match action_tag {
+        "attack" => attack::execute(bot, emitter, target),
+        "vital_trill" => vital_trill::execute(bot, emitter, target),
         _ => return Err(PrefixError::InvalidActionTag { action_tag: FixedString::from_str_trunc(action_tag) }),
     };
+
+    blueprints.extend(emitter.effects_on_action_end(bot));
+    blueprints.extend(target.effects_on_action_end(bot));
+
     Ok(blueprints)
 }
 
-pub fn generate_damage_forecast_response<'a>(bot: &impl AsBot, damage_forecast: i64, target_constitution: i64) -> ResponseBlueprint<'a> {
+pub fn generate_damage_forecast_response(bot: &impl AsBot, damage_forecast: i64, target_constitution: i64) -> ResponseBlueprint {
     let content = match damage_forecast * 100 / (target_constitution * 10) {
         .. 5 => lang_diff!(bot, en: fc!("{LIGHT_EMOJI} | It looks like it will cause light damage."),
                                 pt: fc!("{LIGHT_EMOJI} | Parece que irá causar um dano leve.")),
@@ -25,8 +29,8 @@ pub fn generate_damage_forecast_response<'a>(bot: &impl AsBot, damage_forecast: 
     ResponseBlueprint::new().set_content(content)
 }
 
-pub fn generate_reaction_request_response<'a>(bot: &impl AsBot, target_name: &str) -> Result<ResponseBlueprint<'a>> {
-    let receive_button = CreateButton::new(crate::commands::receive::NAME)
+pub fn generate_reaction_request_response(bot: &impl AsBot, target_name: &str) -> Result<ResponseBlueprint> {
+    let receive_button = CreateButton::new(fc!("{} .", crate::commands::receive::NAME))
         .emoji(ReactionType::Unicode(
             crate::commands::receive::EMOJI
                 .parse()

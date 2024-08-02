@@ -12,7 +12,7 @@ pub fn register() -> CreateCommand<'static> {
         .description_localized("pt-BR", DESCRIPTION_PT)
 }
 
-pub async fn run_slash<'a>() -> Result<Vec<Response<'a>>> { Ok(vec![Response::send(vec![ResponseBlueprint::new().add_embed(embed_1())])]) }
+pub async fn run_slash() -> Result<Vec<Response>> { Ok(vec![Response::send(vec![ResponseBlueprint::new().add_embed(embed_1())])]) }
 
 fn embed_1() -> CreateEmbed<'static> {
     use crate::commands::*;

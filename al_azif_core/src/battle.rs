@@ -20,13 +20,13 @@ impl Battle {
             turn_counter:           0,
             phase_counter:          0,
             current_turn_owner_tag: FixedString::from_static_trunc(""),
-            current_moment:         Moment::None,
+            current_moment:         Moment::Primary(PrimaryMoment { moment_owner_tag: FixedString::from_static_trunc("") }),
             turn_value_cap:         0,
         }
     }
 }
 impl Battle {
-    pub async fn advance<'a>(&mut self, bot: &impl AsBot) -> Result<Blueprints<'a>> {
+    pub async fn advance(&mut self, bot: &impl AsBot) -> Result<Blueprints> {
         let mut blueprints = Vec::new();
 
         if let Some(current_turn_owner_tag) =
@@ -48,7 +48,8 @@ impl Battle {
             if let Some(next_turn_owner_tag) = self.get_next_turn_owner().map(FixedString::from_str_trunc) {
                 blueprints.extend(Mirror::<Id>::get(bot, &next_turn_owner_tag).await?.write().await.start_turn(self).await?);
                 self.turn_counter += 1;
-                self.current_turn_owner_tag = next_turn_owner_tag;
+                self.current_turn_owner_tag = next_turn_owner_tag.clone();
+                self.current_moment = Moment::Primary(PrimaryMoment { moment_owner_tag: next_turn_owner_tag });
                 break;
             }
 
@@ -60,7 +61,7 @@ impl Battle {
         Ok(blueprints)
     }
 
-    async fn start_next_phase<'a>(&mut self, bot: &impl AsBot) -> Result<Blueprints<'a>> {
+    async fn start_next_phase(&mut self, bot: &impl AsBot) -> Result<Blueprints> {
         let mut blueprints = Vec::new();
 
         for (id_tag, opponent) in &mut self.opponents {
@@ -74,7 +75,7 @@ impl Battle {
         Ok(blueprints)
     }
 
-    pub async fn generate_turn_screen<'a>(&mut self, bot: &impl AsBot) -> Result<ResponseBlueprint<'a>> {
+    pub async fn generate_turn_screen(&mut self, bot: &impl AsBot) -> Result<ResponseBlueprint> {
         let mut new_desc = String::new();
 
         for (id_tag, opponent) in &mut self.opponents {
@@ -153,6 +154,17 @@ impl Opponent {
 
 #[derive(Deserialize, Serialize)]
 pub enum Moment {
-    None,
-    PrimaryAction { primary_action_tag: FixedString, attacker_tag: FixedString, target_tag: FixedString },
+    Primary(PrimaryMoment),
+    Reactive(ReactiveMoment),
+}
+#[derive(Clone, Deserialize, Serialize)]
+pub struct PrimaryMoment {
+    pub moment_owner_tag: FixedString,
+}
+#[derive(Clone, Deserialize, Serialize)]
+pub struct ReactiveMoment {
+    pub primary_moment_owner_tag: FixedString,
+    pub primary_action_tag:       FixedString,
+    pub target_tags:              Vec<FixedString>,
+    pub target_index:             usize,
 }

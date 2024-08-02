@@ -3,91 +3,49 @@ use crate::_prelude::*;
 pub const NAME: &str = "vital_trill";
 pub const NAME_PT: &str = "trinado_vital";
 
-pub async fn run_prefix<'a>(bot: &impl AsBot, msg: &Message, args: &[&'a str]) -> Result<Responses<'a>> {
-    let (battle_m, attacker_m, target_m) = {
-        let Ok(battle_m) = Mirror::<Battle>::get(bot, msg.channel_id.to_string()).await else {
-            return Ok(response::simple_send_and_delete_with_original(lang_diff!(bot,
-                en: "No battle is currently happening in this channel.",
-                pt: "Não há uma batalha acontecendo neste canal."
-            )));
-        };
-        let battle = battle_m.read().await;
+pub async fn run_prefix(bot: &impl AsBot, msg: &Message, args: VecDeque<&str>) -> Result<Responses> {
+    let setting = Setting::new(bot, args)
+        .fetch_battle(msg.channel_id.to_string())
+        .await?
+        .require_primary_moment()
+        .await?
+        .fetch_user()
+        .await?
+        .fetch_targets([lang_diff!(bot,
+            en: "You need to specify the target.",
+            pt: "Você precisa especificar o alvo."
+        )])
+        .await?
+        .unallow_self_target::<0>(lang_diff!(bot,
+            en: "You can't attack yourself.",
+            pt: "Você não pode atacar a si mesmo."
+        ))?;
 
-        let Moment::None = battle.current_moment else {
-            return Ok(response::simple_send_and_delete_with_original(lang_diff!(bot,
-                en: "You can't use this command right now.",
-                pt: "Você não pode usar este comando agora."
-            )));
-        };
+    let mut blueprints = Vec::new();
 
-        let Some(target_tag) = args.first().copied() else {
-            return Ok(response::simple_send_and_delete_with_original(lang_diff!(bot,
-                en: "You need to specify the target.",
-                pt: "Você precisa especificar o alvo."
-            )));
-        };
+    let mut battle = setting.get_battle_mirror().write().await;
+    let user = setting.get_user_mirror().read().await;
+    let target = setting.get_target_ms()[0].read().await;
 
-        if target_tag == battle.current_turn_owner_tag {
-            return Ok(response::simple_send_and_delete_with_original(lang_diff!(bot,
-                en: "You can't attack yourself.",
-                pt: "Você não pode atacar a si mesmo."
-            )));
-        }
+    blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
+        en: f!("{STRIKE_EMOJI} | **{}** will attack **{}**.", user.name, target.name),
+        pt: f!("{STRIKE_EMOJI} | **{}** irá atacar **{}**.", user.name, target.name,
+    ))));
 
-        let Ok(target_m) = Mirror::<Id>::get(bot, target_tag).await else {
-            return Ok(response::simple_send_and_delete_with_original(lang_diff!(bot,
-                en: "This target doesn't exist.",
-                pt: "Este alvo não existe."
-            )));
-        };
+    battle.current_moment = Moment::Reactive(ReactiveMoment {
+        primary_moment_owner_tag: user.tag.clone(),
+        primary_action_tag:       FixedString::from_static_trunc(NAME),
+        target_tags:              vec![target.tag.clone()],
+        target_index:             0,
+    });
 
-        if !battle.opponents.contains_key(&FixedString::from_str_trunc(target_tag)) {
-            return Ok(response::simple_send_and_delete_with_original(lang_diff!(bot,
-                en: "This target is not in the battle.",
-                pt: "Este alvo não está na batalha.")));
-        }
-
-        let attacker_m = Mirror::<Id>::get(bot, &battle.current_turn_owner_tag).await?;
-
-        mem::drop(battle);
-
-        (battle_m, attacker_m, target_m)
-    };
-
-    let blueprints = main_logic(bot, battle_m, attacker_m, target_m).await?;
+    blueprints.push(handler::generate_damage_forecast_response(bot, damage_evaluation(&user), target.constitution));
+    blueprints.push(handler::generate_reaction_request_response(bot, &target.name)?);
 
     Ok(vec![Response::send(blueprints)])
 }
 
-async fn main_logic<'a>(
-    bot: &impl AsBot,
-    battle_m: Mirror<Battle>,
-    attacker_m: Mirror<Id>,
-    target_m: Mirror<Id>,
-) -> Result<Blueprints<'a>> {
-    let mut blueprints = Vec::new();
-
-    let mut battle = battle_m.write().await;
-    let attacker = attacker_m.read().await;
-    let target = target_m.read().await;
-
-    blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
-        en: f!("{STRIKE_EMOJI} | **{}** will attack **{}**.", attacker.name, target.name),
-        pt: f!("{STRIKE_EMOJI} | **{}** irá atacar **{}**.", attacker.name, target.name,
-    ))));
-    blueprints.push(handler::generate_damage_forecast_response(bot, damage_evaluation(&attacker), target.constitution));
-    blueprints.push(handler::generate_reaction_request_response(bot, &target.name)?);
-
-    battle.current_moment = Moment::PrimaryAction {
-        primary_action_tag: FixedString::from_static_trunc(NAME),
-        attacker_tag:       attacker.tag.clone(),
-        target_tag:         target.tag.clone(),
-    };
-
-    Ok(blueprints)
-}
-
-pub fn execute<'a>(bot: &impl AsBot, attacker: &mut Id, target: &mut Id) -> Blueprints<'a> {
+pub fn execute(bot: &impl AsBot, attacker: &mut Id, target: &mut Id) -> Blueprints {
     let mut blueprints = Vec::new();
     let mut damage = damage_evaluation(attacker);
 

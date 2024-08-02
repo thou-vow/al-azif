@@ -30,7 +30,7 @@ pub mod distribute {
     pub const NAME_PT: &str = "distribuir";
     pub const DESCRIPTION_PT: &str = "Distribuir pontos para os atributos";
 
-    pub async fn run_slash<'a>(bot: &impl AsBot, id_tag: &str) -> Result<Responses<'a>> {
+    pub async fn run_slash(bot: &impl AsBot, id_tag: &str) -> Result<Responses> {
         let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
             return Ok(response::simple_send_and_delete("Informe um Id válido."));
         };
@@ -44,7 +44,7 @@ pub mod distribute {
     pub mod goto_attributes {
         use super::*;
 
-        pub async fn run_component<'a>(bot: &impl AsBot, id_tag: &str) -> Result<Responses<'a>> {
+        pub async fn run_component(bot: &impl AsBot, id_tag: &str) -> Result<Responses> {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
 
             let new_embed = generate_embed(bot, &*id_m.read().await)?;
@@ -57,7 +57,7 @@ pub mod distribute {
     pub mod goto_incrementors {
         use super::*;
 
-        pub async fn run_component<'a>(bot: &impl AsBot, id_tag: &str, attribute_str: &str) -> Result<Responses<'a>> {
+        pub async fn run_component(bot: &impl AsBot, id_tag: &str, attribute_str: &str) -> Result<Responses> {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
 
             let new_embed = generate_embed(bot, &*id_m.read().await)?;
@@ -70,14 +70,13 @@ pub mod distribute {
     pub mod invest_in {
         use super::*;
 
-        pub async fn run_component<'a>(bot: &impl AsBot, id_tag: &str, attribute_str: &str, selected_value: i64) -> Result<Responses<'a>> {
+        pub async fn run_component(bot: &impl AsBot, id_tag: &str, attribute_str: &str, selected_value: i64) -> Result<Responses> {
             let id_m = Mirror::<Id>::get(bot, id_tag).await?;
 
             let mut id = id_m.write().await;
             invest(&mut id, attribute_str, selected_value)?;
             let id = id.downgrade()?;
             let new_embed = generate_embed(bot, &id)?;
-            mem::drop(id);
 
             let new_components = generate_incrementor_components(id_tag, attribute_str)?;
 
@@ -104,7 +103,7 @@ pub mod distribute {
         Ok(())
     }
 
-    fn generate_embed<'a>(bot: &impl AsBot, id: &Id) -> Result<CreateEmbed<'a>> {
+    fn generate_embed(bot: &impl AsBot, id: &Id) -> Result<CreateEmbed<'static>> {
         let mut attributes_field = String::new();
         attributes_field += &f!("{CON_EMOJI} `{}` {}\n", lang_diff!(bot, en: CON_SHORT, pt: CON_SHORT_PT), mark_thousands(id.constitution));
         attributes_field += &f!("{SPR_EMOJI} `{}` {}\n", lang_diff!(bot, en: SPR_SHORT, pt: SPR_SHORT_PT), mark_thousands(id.spirit));
@@ -127,7 +126,7 @@ pub mod distribute {
         Ok(new_embed)
     }
 
-    fn generate_attribute_components<'a>(id_tag: &str) -> Result<Vec<CreateActionRow<'a>>> {
+    fn generate_attribute_components(id_tag: &str) -> Result<Vec<CreateActionRow<'static>>> {
         let row_1 = CreateActionRow::Buttons(vec![
             CreateButton::new(f!("#slash id distribute goto_incrementors {id_tag} con")).emoji(ReactionType::Unicode(
                 CON_EMOJI.parse().map_err(|_| SlashError::FailedToConvertStringToReactionType { str: CON_EMOJI })?,
@@ -158,7 +157,7 @@ pub mod distribute {
         Ok(vec![row_1, row_2])
     }
 
-    fn generate_incrementor_components<'a>(id_tag: &str, attribute_str: &str) -> Result<Vec<CreateActionRow<'a>>> {
+    fn generate_incrementor_components(id_tag: &str, attribute_str: &str) -> Result<Vec<CreateActionRow<'static>>> {
         let custom_button_id_lead = f!("#slash id distribute invest_in {id_tag} {attribute_str} ");
 
         let new_button_1 = CreateButton::new(f!("{custom_button_id_lead}1")).label("+1");

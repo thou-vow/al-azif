@@ -10,24 +10,31 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Result<()> {
         return Ok(());
     };
 
+    let args = args.collect();
+
     let execution_result = match name.to_lowercase().as_str() {
-        attack::NAME | attack::NAME_PT => attack::run_prefix(bot, msg, &args.collect::<Vec<&str>>()).await.map_err(EventError::Prefix),
-        block::NAME | block::NAME_PT => block::run_prefix(bot, msg).await.map_err(EventError::Prefix),
-        miracle::NAME | miracle::NAME_PT => miracle::run_prefix(bot, msg).await.map_err(EventError::Prefix),
-        receive::NAME | receive::NAME_PT => receive::run_prefix(bot, msg).await.map_err(EventError::Prefix),
-        rise::NAME | rise::NAME_PT => rise::run_prefix(bot, msg).await.map_err(EventError::Prefix),
-        vital_trill::NAME | vital_trill::NAME_PT => {
-            vital_trill::run_prefix(bot, msg, &args.collect::<Vec<&str>>()).await.map_err(EventError::Prefix)
-        },
+        attack::NAME | attack::NAME_PT => attack::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        block::NAME | block::NAME_PT => block::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        heal::NAME | heal::NAME_PT => heal::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        miracle::NAME | miracle::NAME_PT => miracle::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        receive::NAME | receive::NAME_PT => receive::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        rise::NAME | rise::NAME_PT => rise::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        vital_trill::NAME | vital_trill::NAME_PT => vital_trill::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
         _ => return Err(EventError::InvalidPrefixCommand { name: FixedString::from_str_trunc(name) }),
     };
 
-    let responses = execution_result?;
+    let responses = match execution_result {
+        Ok(responses) => responses,
+        Err(EventError::Prefix(PrefixError::Expected(blueprints))) => {
+            vec![Response::delete_original(), Response::send_and_delete(blueprints)]
+        },
+        Err(err) => return Err(err),
+    };
 
-    perform_response_responses(ctx, msg, responses).await
+    perform_responses(ctx, msg, responses).await
 }
 
-pub async fn perform_response_responses<'a>(ctx: &Context, msg: &Message, responses: Vec<Response<'a>>) -> Result<()> {
+pub async fn perform_responses(ctx: &Context, msg: &Message, responses: Vec<Response>) -> Result<()> {
     let mut delete_original = false;
     let mut msgs_to_delete = Vec::new();
 

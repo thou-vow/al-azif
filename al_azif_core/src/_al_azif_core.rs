@@ -1,4 +1,4 @@
-#![feature(decl_macro, linked_list_cursors, try_trait_v2)]
+#![feature(decl_macro, linked_list_cursors)]
 
 pub mod _prelude;
 pub mod battle;

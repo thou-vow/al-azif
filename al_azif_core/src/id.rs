@@ -69,7 +69,7 @@ impl Id {
         self.current_battle_tag = Some(battle.tag.clone());
     }
 
-    pub async fn start_turn<'a>(&mut self, _battle: &mut Battle) -> Result<Blueprints<'a>> {
+    pub async fn start_turn(&mut self, _battle: &mut Battle) -> Result<Blueprints> {
         let mut blueprints = Vec::new();
 
         blueprints.push(ResponseBlueprint::new().set_content(f!("🕒 | Agora é a vez de **{}**.", self.name)));
@@ -77,7 +77,7 @@ impl Id {
         Ok(blueprints)
     }
 
-    pub async fn end_turn<'a>(&mut self, bot: &impl AsBot, battle: &mut Battle) -> Result<Blueprints<'a>> {
+    pub async fn end_turn(&mut self, bot: &impl AsBot, battle: &mut Battle) -> Result<Blueprints> {
         let mut blueprints = Vec::new();
 
         battle.opponents.get_mut(&self.tag).unwrap().sub_turn_value(battle.turn_value_cap);
@@ -88,7 +88,7 @@ impl Id {
         Ok(blueprints)
     }
 
-    pub fn acquire_effect<'a>(&mut self, bot: &impl AsBot, new_effect: impl AsEffect) -> Blueprints<'a> {
+    pub fn acquire_effect(&mut self, bot: &impl AsBot, new_effect: impl AsEffect) -> Blueprints {
         let mut blueprints = Vec::new();
 
         if let Some(acquire_effect_text) = new_effect.acquire_effect_text(bot, &self.name) {
@@ -100,7 +100,7 @@ impl Id {
         blueprints
     }
 
-    pub fn receive_damage<'a>(&mut self, bot: &impl AsBot, damage: i64) -> Blueprints<'a> {
+    pub fn receive_damage(&mut self, bot: &impl AsBot, damage: i64) -> Blueprints {
         let mut blueprints = Vec::new();
         let mut cursor = self.effects.cursor_front_mut();
 
@@ -111,16 +111,41 @@ impl Id {
         blueprints
     }
 
-    pub fn lose_health<'a>(&mut self, bot: &impl AsBot, amount: i64) -> Blueprints<'a> {
+    pub fn lose_health(&mut self, bot: &impl AsBot, amount: i64) -> Blueprints {
         let mut blueprints = Vec::new();
 
         let previous_hp = self.hp;
-        self.hp = (self.hp - amount).clamp(0, self.hp);
+        self.hp = (self.hp - amount).clamp(0, self.constitution * 10);
 
-        blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
-            en: f!("{CON_EMOJI} | {HP_SHORT}: {previous_hp} → {}", self.hp),
-            pt: f!("{CON_EMOJI} | {HP_SHORT_PT}: {previous_hp} → {}", self.hp)
-        )));
+        if previous_hp != self.hp {
+            blueprints.push(ResponseBlueprint::new().set_content(f!(
+                "```ansi\n\u{001b}[0;40m{}: \u{001b}[0;40;{}m{}\u{001b}[0;40m → \u{001b}[0;40;{}m{}```",
+                lang_diff!(bot, en: HP_SHORT, pt: HP_SHORT_PT),
+                match previous_hp * 100 / (self.constitution * 10) {
+                    .. 33 => 31,
+                    33 .. 66 => 33,
+                    _ => 32,
+                },
+                mark_thousands(previous_hp),
+                match self.hp * 100 / (self.constitution * 10) {
+                    .. 33 => 31,
+                    33 .. 66 => 33,
+                    _ => 32,
+                },
+                mark_thousands(self.hp),
+            )));
+        } else {
+            blueprints.push(ResponseBlueprint::new().set_content(f!(
+                "```ansi\n\u{001b}[0;40m{}: \u{001b}[0;40;{}m{}```",
+                lang_diff!(bot, en: HP_SHORT, pt: HP_SHORT_PT),
+                match self.hp * 100 / (self.constitution * 10) {
+                    .. 33 => 31,
+                    33 .. 66 => 33,
+                    _ => 32,
+                },
+                mark_thousands(self.hp),
+            )));
+        }
 
         if self.hp == 0 {
             blueprints.extend(self.faint(bot));
@@ -131,23 +156,48 @@ impl Id {
         blueprints
     }
 
-    pub fn restore_health<'a>(&mut self, bot: &impl AsBot, amount: i64) -> Blueprints<'a> {
+    pub fn restore_health(&mut self, bot: &impl AsBot, amount: i64) -> Blueprints {
         let mut blueprints = Vec::new();
 
         let previous_hp = self.hp;
-        self.hp = (self.hp + amount).clamp(0, self.hp);
+        self.hp = (self.hp + amount).clamp(0, self.constitution * 10);
 
-        blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
-            en: f!("{CON_EMOJI} | {HP_SHORT}: {previous_hp} → {}", self.hp),
-            pt: f!("{CON_EMOJI} | {HP_SHORT_PT}: {previous_hp} → {}", self.hp)
-        )));
+        if previous_hp != self.hp {
+            blueprints.push(ResponseBlueprint::new().set_content(f!(
+                "```ansi\n\u{001b}[0;40m{}: \u{001b}[0;40;{}m{}\u{001b}[0;40m → \u{001b}[0;40;{}m{}```",
+                lang_diff!(bot, en: HP_SHORT, pt: HP_SHORT_PT),
+                match previous_hp * 100 / (self.constitution * 10) {
+                    .. 33 => 31,
+                    33 .. 66 => 33,
+                    _ => 32,
+                },
+                mark_thousands(previous_hp),
+                match self.hp * 100 / (self.constitution * 10) {
+                    .. 33 => 31,
+                    33 .. 66 => 33,
+                    _ => 32,
+                },
+                mark_thousands(self.hp),
+            )));
+        } else {
+            blueprints.push(ResponseBlueprint::new().set_content(f!(
+                "```ansi\n\u{001b}[0;40m{}: \u{001b}[0;40;{}m{}```",
+                lang_diff!(bot, en: HP_SHORT, pt: HP_SHORT_PT),
+                match self.hp * 100 / (self.constitution * 10) {
+                    .. 33 => 31,
+                    33 .. 66 => 33,
+                    _ => 32,
+                },
+                mark_thousands(self.hp),
+            )));
+        }
 
         // Todo: Effects after restoring HP
 
         blueprints
     }
 
-    pub fn faint<'a>(&mut self, bot: &impl AsBot) -> Blueprints<'a> {
+    pub fn faint(&mut self, bot: &impl AsBot) -> Blueprints {
         let mut blueprints = self.acquire_effect(bot, FaintEffect);
 
         blueprints.extend(self.effects_on_fainting(bot));
@@ -185,7 +235,7 @@ impl Id {
         bonuses
     }
 
-    pub fn effects_on_turn_end<'a>(&mut self, bot: &impl AsBot, _battle: &mut Battle) -> Blueprints<'a> {
+    pub fn effects_on_action_end(&mut self, bot: &impl AsBot) -> Blueprints {
         let mut blueprints = Vec::new();
         let mut cursor = self.effects.cursor_front_mut();
 
@@ -197,21 +247,6 @@ impl Id {
             match effect {
                 Effect::Bleed(bleed) => {
                     acting_effects.push(Effect::Bleed(bleed.clone()));
-
-                    if bleed.turn_duration <= 0 {
-                        remove_effect = true;
-                    } else {
-                        bleed.turn_duration -= 1;
-                    }
-                },
-                Effect::Rise(rise) => {
-                    acting_effects.push(Effect::Rise(rise.clone()));
-
-                    if rise.turn_duration <= 0 {
-                        remove_effect = true;
-                    } else {
-                        rise.turn_duration -= 1;
-                    }
                 },
                 _ => (),
             }
@@ -241,9 +276,87 @@ impl Id {
                         )
                     )));
                     blueprints.extend(self.receive_damage(bot, bleed.damage_over_turn));
+                },
+                _ => (),
+            }
+        }
+
+        blueprints
+    }
+
+    pub fn effects_on_turn_end(&mut self, bot: &impl AsBot, _battle: &mut Battle) -> Blueprints {
+        let mut blueprints = Vec::new();
+        let mut cursor = self.effects.cursor_front_mut();
+
+        let mut acting_effects = Vec::new();
+
+        while let Some(effect) = cursor.current() {
+            let mut remove_effect = false;
+
+            match effect {
+                Effect::Bleed(bleed) => {
+                    acting_effects.push(Effect::Bleed(bleed.clone()));
 
                     if bleed.turn_duration <= 0 {
+                        remove_effect = true;
+                    } else {
+                        bleed.turn_duration -= 1;
+                    }
+                },
+                Effect::HealingOverTime(healing_over_time) => {
+                    acting_effects.push(Effect::HealingOverTime(healing_over_time.clone()));
+
+                    if healing_over_time.turn_duration <= 0 {
+                        remove_effect = true;
+                    } else {
+                        healing_over_time.turn_duration -= 1;
+                    }
+                },
+                Effect::Rise(rise) => {
+                    acting_effects.push(Effect::Rise(rise.clone()));
+
+                    if rise.turn_duration <= 0 {
+                        remove_effect = true;
+                    } else {
+                        rise.turn_duration -= 1;
+                    }
+                },
+                _ => (),
+            }
+
+            if remove_effect {
+                cursor.remove_current();
+            } else {
+                cursor.move_next();
+            }
+        }
+
+        for effect in acting_effects {
+            match effect {
+                Effect::Bleed(bleed) => {
+                    if bleed.turn_duration <= 0 {
                         blueprints.push(ResponseBlueprint::new().set_content(bleed.lose_effect_text(bot, &self.name).unwrap()));
+                    }
+                },
+                Effect::HealingOverTime(healing) => {
+                    blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
+                        en: f!("{} | **{}** received **{}** of healing due to the **{}** effect.",
+                            HealingOverTimeEffect::EMOJI,
+                            self.name,
+                            mark_thousands(healing.healing_over_turn),
+                            HealingOverTimeEffect::NAME,
+                        ),
+                        pt: f!("{} | **{}** recebeu **{}** de cura devido ao efeito **{}**.",
+                            HealingOverTimeEffect::EMOJI,
+                            self.name,
+                            mark_thousands(healing.healing_over_turn),
+                            HealingOverTimeEffect::NAME_PT,
+                        )
+                    )));
+                    blueprints.extend(self.restore_health(bot, healing.healing_over_turn));
+
+                    if healing.turn_duration <= 0 {
+                        blueprints.push(ResponseBlueprint::new().set_content(healing.lose_effect_text(bot, &self.name).unwrap()));
                     }
                 },
                 Effect::Rise(rise) => {
@@ -258,12 +371,7 @@ impl Id {
         blueprints
     }
 
-    pub fn effects_when_attacking_with_primary_action<'a>(
-        &mut self,
-        bot: &impl AsBot,
-        mut damage: i64,
-        target: &mut Id,
-    ) -> (i64, Blueprints<'a>) {
+    pub fn effects_when_attacking_with_primary_action(&mut self, bot: &impl AsBot, mut damage: i64, target: &mut Id) -> (i64, Blueprints) {
         let mut _blueprints = Vec::new();
         let mut _cursor = self.effects.cursor_front_mut();
 
@@ -300,7 +408,7 @@ impl Id {
         (damage, _blueprints)
     }
 
-    pub fn effects_on_fainting<'a>(&mut self, bot: &impl AsBot) -> Blueprints<'a> {
+    pub fn effects_on_fainting(&mut self, bot: &impl AsBot) -> Blueprints {
         let mut blueprints = Vec::new();
         let mut cursor = self.effects.cursor_front_mut();
 

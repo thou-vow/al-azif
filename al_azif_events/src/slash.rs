@@ -140,10 +140,10 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) ->
 
     let responses = execution_result?;
 
-    perform_response_responses(ctx, slash, responses).await
+    perform_responses(ctx, slash, responses).await
 }
 
-pub async fn perform_response_responses<'a>(ctx: &Context, slash: &CommandInteraction, responses: Responses<'a>) -> Result<()> {
+pub async fn perform_responses(ctx: &Context, slash: &CommandInteraction, responses: Responses) -> Result<()> {
     let mut msgs_to_delete = Vec::new();
 
     for response in responses {

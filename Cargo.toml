@@ -14,7 +14,7 @@ al_azif_events.path = "./al_azif_events"
 al_azif_prefix.path = "./al_azif_prefix"
 al_azif_slash.path = "./al_azif_slash"
 anyhow = "1.0.86"
-serde_json = { version = "1.0.120", default-features = false }
+serde_json = { version = "1.0.121", default-features = false }
 const_format = "0.2.32"
 dotenvy = { version = "0.15.7", default-features = false }
 rand = { version = "0.8.5", default-features = false }
@@ -22,7 +22,7 @@ serde = { version = "1.0.204", default-features = false }
 serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next", default-features = false, features = ["client", "gateway", "model", "rustls_backend"] }
 small-fixed-array = { version = "0.4.5", default-features = false }
 thiserror = "1.0.63"
-tokio = { version = "1.39.1", features = ["rt-multi-thread"] }
+tokio = { version = "1.39.2", features = ["rt-multi-thread"] }
 tracing = { version = "0.1.40", default-features = false }
 tracing-subscriber = { version = "0.3.18", default-features = false, features = ["fmt"] }
 

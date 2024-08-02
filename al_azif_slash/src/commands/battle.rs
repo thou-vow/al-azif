@@ -45,7 +45,7 @@ pub mod end {
     pub const NAME_PT: &str = "terminar";
     pub const DESCRIPTION_PT: &str = "Encerrar a batalha";
 
-    pub async fn run_slash<'a>(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Responses<'a>> {
+    pub async fn run_slash(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Responses> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
             return Ok(response::simple_send_and_delete(lang_diff!(bot,
@@ -78,7 +78,7 @@ pub mod join {
     pub const NAME_PT: &str = "participar";
     pub const DESCRIPTION_PT: &str = "Integrar Ids na batalha";
 
-    pub async fn run_slash<'a>(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Responses<'a>> {
+    pub async fn run_slash(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Responses> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
             return Ok(response::simple_send_and_delete(lang_diff!(bot,
@@ -173,7 +173,7 @@ pub mod start {
     pub const NAME_PT: &str = "iniciar";
     pub const DESCRIPTION_PT: &str = "Iniciar uma batalha";
 
-    pub async fn run_slash<'a>(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Vec<Response<'a>>> {
+    pub async fn run_slash(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Vec<Response>> {
         let battle_tag = slash.channel_id.to_string();
         if Mirror::<Battle>::get(bot, &battle_tag).await.is_ok() {
             return Ok(response::simple_send("Já está ocorrendo uma batalha neste canal."));

@@ -3,10 +3,13 @@ use crate::_prelude::*;
 pub async fn run(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction) -> Result<()> {
     let mut args = comp.data.custom_id.split(' ');
 
-    match args.next() {
-        Some("#slash") => run_slash(bot, ctx, comp, args.collect::<Vec<&str>>()).await,
-        Some(prefix) => run_prefix(bot, ctx, comp, iter::once(prefix).chain(args).collect::<Vec<&str>>()).await,
-        None => Err(EventError::EmptyComponentInteractionCustomId),
+    let Some(slash_or_name) = args.next() else {
+        return Err(EventError::EmptyComponentInteractionCustomId);
+    };
+
+    match slash_or_name {
+        "#slash" => run_slash(bot, ctx, comp, args.collect::<Vec<&str>>()).await,
+        name => run_prefix(bot, ctx, comp, name, args).await,
     }
 }
 
@@ -30,22 +33,31 @@ pub async fn run_slash(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteract
 
     let responses = execution_result?;
 
-    perform_response_responses(ctx, comp, responses).await
+    perform_responses(ctx, comp, responses).await
 }
 
-pub async fn run_prefix(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction, args: Vec<&str>) -> Result<()> {
+pub async fn run_prefix(bot: &impl AsBot, ctx: &Context, comp: &ComponentInteraction, name: &str, args: Split<'_, char>) -> Result<()> {
     use al_azif_prefix::commands::*;
 
-    let execution_result = match args.as_slice() {
-        [receive::NAME] => receive::run_component(bot, comp).await.map_err(EventError::Prefix),
+    let args = args.collect();
+
+    let execution_result = match name {
+        receive::NAME => receive::run_component(bot, comp, args).await.map_err(EventError::Prefix),
         _ => Err(EventError::InvalidPrefixComponent { custom_id: comp.data.custom_id.clone() }),
     };
 
-    let responses = execution_result?;
+    let responses = match execution_result {
+        Ok(responses) => responses,
+        Err(EventError::Prefix(PrefixError::Expected(blueprints))) => {
+            vec![Response::send_and_delete(blueprints)]
+        },
+        Err(err) => return Err(err),
+    };
 
-    perform_response_responses(ctx, comp, responses).await
+    perform_responses(ctx, comp, responses).await
 }
-pub async fn perform_response_responses<'a>(ctx: &Context, comp: &ComponentInteraction, responses: Responses<'a>) -> Result<()> {
+
+pub async fn perform_responses(ctx: &Context, comp: &ComponentInteraction, responses: Responses) -> Result<()> {
     let mut msgs_to_delete = Vec::new();
 
     for response in responses {

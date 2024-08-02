@@ -5,6 +5,7 @@ pub enum Effect {
     Bleed(BleedEffect),
     Block(BlockEffect),
     Faint(FaintEffect),
+    HealingOverTime(HealingOverTimeEffect),
     Miracle(MiracleEffect),
     Rise(RiseEffect),
 }
@@ -14,6 +15,7 @@ impl Effect {
             Self::Bleed(_) => BleedEffect::EMOJI,
             Self::Block(_) => BlockEffect::EMOJI,
             Self::Faint(_) => FaintEffect::EMOJI,
+            Self::HealingOverTime(_) => HealingOverTimeEffect::EMOJI,
             Self::Miracle(_) => MiracleEffect::EMOJI,
             Self::Rise(_) => RiseEffect::EMOJI,
         }
@@ -24,6 +26,7 @@ impl Effect {
             Self::Bleed(_) => BleedEffect::NAME,
             Self::Block(_) => BlockEffect::NAME,
             Self::Faint(_) => FaintEffect::NAME,
+            Self::HealingOverTime(_) => HealingOverTimeEffect::NAME,
             Self::Miracle(_) => MiracleEffect::NAME,
             Self::Rise(_) => RiseEffect::NAME,
         }
@@ -34,6 +37,7 @@ impl Effect {
             Self::Bleed(_) => BleedEffect::NAME_PT,
             Self::Block(_) => BlockEffect::NAME_PT,
             Self::Faint(_) => FaintEffect::NAME_PT,
+            Self::HealingOverTime(_) => HealingOverTimeEffect::NAME_PT,
             Self::Miracle(_) => MiracleEffect::NAME_PT,
             Self::Rise(_) => RiseEffect::NAME_PT,
         }
@@ -44,6 +48,7 @@ impl Effect {
             Self::Bleed(bleed) => bleed.acquire_effect_text(bot, id_name),
             Self::Block(block) => block.acquire_effect_text(bot, id_name),
             Self::Faint(faint) => faint.acquire_effect_text(bot, id_name),
+            Self::HealingOverTime(healing) => healing.acquire_effect_text(bot, id_name),
             Self::Miracle(miracle) => miracle.acquire_effect_text(bot, id_name),
             Self::Rise(rise) => rise.acquire_effect_text(bot, id_name),
         }
@@ -54,6 +59,7 @@ impl Effect {
             Self::Bleed(bleed) => bleed.lose_effect_text(bot, id_name),
             Self::Block(block) => block.lose_effect_text(bot, id_name),
             Self::Faint(faint) => faint.lose_effect_text(bot, id_name),
+            Self::HealingOverTime(healing) => healing.lose_effect_text(bot, id_name),
             Self::Miracle(miracle) => miracle.lose_effect_text(bot, id_name),
             Self::Rise(rise) => rise.lose_effect_text(bot, id_name),
         }
@@ -64,6 +70,7 @@ impl Effect {
             Self::Bleed(bleed) => bleed.summary(bot),
             Self::Block(block) => block.summary(bot),
             Self::Faint(faint) => faint.summary(bot),
+            Self::HealingOverTime(healing) => healing.summary(bot),
             Self::Miracle(miracle) => miracle.summary(bot),
             Self::Rise(rise) => rise.summary(bot),
         }
@@ -77,6 +84,9 @@ impl From<BlockEffect> for Effect {
 }
 impl From<FaintEffect> for Effect {
     fn from(faint: FaintEffect) -> Self { Self::Faint(faint) }
+}
+impl From<HealingOverTimeEffect> for Effect {
+    fn from(healing: HealingOverTimeEffect) -> Self { Self::HealingOverTime(healing) }
 }
 impl From<MiracleEffect> for Effect {
     fn from(miracle: MiracleEffect) -> Self { Self::Miracle(miracle) }
@@ -136,12 +146,12 @@ impl AsEffect for BleedEffect {
 
     fn summary(&self, bot: &impl AsBot) -> Cow<'static, str> {
         lang_diff!(bot,
-            en: f!("Receive **{}** damage after each user action for **{}** turn{}.",
+            en: f!("Receive **{}** damage after each action for **{}** turn{}.",
                 mark_thousands(self.damage_over_turn),
                 mark_thousands(self.turn_duration),
                 if self.turn_duration > 1 || self.turn_duration < -1 { "s" } else { "" },
             ),
-            pt: f!("Recebe **{}** de dano após cada ação do usuário durante **{}** turno{}.",
+            pt: f!("Recebe **{}** de dano após cada ação durante **{}** turno{}.",
                 mark_thousands(self.damage_over_turn),
                 mark_thousands(self.turn_duration),
                 if self.turn_duration > 1 || self.turn_duration < -1 { "s" } else { "" },
@@ -208,6 +218,63 @@ impl AsEffect for FaintEffect {
         lang_diff!(bot,
             en: "Unable to perform any action.",
             pt: "Incapaz de realizar nenhuma ação."
+        )
+        .into()
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct HealingOverTimeEffect {
+    pub healing_over_turn: i64,
+    pub turn_duration:     i64,
+}
+impl AsEffect for HealingOverTimeEffect {
+    const EMOJI: &'static str = "💊";
+    const NAME: &'static str = "Healing Over Time";
+    const NAME_PT: &'static str = "Cura Periódica";
+
+    fn acquire_effect_text(&self, bot: &impl AsBot, id_name: &str) -> Option<String> {
+        Some(lang_diff!(bot,
+            en: f!("{} | **{}** acquired the effect **{}**.",
+                Self::EMOJI,
+                id_name,
+                Self::NAME,
+            ),
+            pt: f!("{} | **{}** adquiriu o efeito **{}**.",
+                Self::EMOJI,
+                id_name,
+                Self::NAME_PT,
+            )
+        ))
+    }
+
+    fn lose_effect_text(&self, bot: &impl AsBot, id_name: &str) -> Option<String> {
+        Some(lang_diff!(bot,
+            en: f!("{} | **{}** lost the effect **{}**.",
+                Self::EMOJI,
+                id_name,
+                Self::NAME,
+            ),
+            pt: f!("{} | **{}** perdeu o efeito **{}**.",
+                Self::EMOJI,
+                id_name,
+                Self::NAME_PT,
+            )
+        ))
+    }
+
+    fn summary(&self, bot: &impl AsBot) -> Cow<'static, str> {
+        lang_diff!(bot,
+            en: f!("Receive **{}** of healing after each turn for **{}** turn{}.",
+                mark_thousands(self.healing_over_turn),
+                mark_thousands(self.turn_duration),
+                if self.turn_duration > 1 || self.turn_duration < -1 { "s" } else { "" },
+            ),
+            pt: f!("Recebe **{}** de cura após cada turno durante **{}** turno{}.",
+                mark_thousands(self.healing_over_turn),
+                mark_thousands(self.turn_duration),
+                if self.turn_duration > 1 || self.turn_duration < -1 { "s" } else { "" },
+            )
         )
         .into()
     }

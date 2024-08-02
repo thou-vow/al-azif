@@ -37,7 +37,7 @@ pub mod bestow {
     pub const NAME_PT: &str = "conceder";
     pub const DESCRIPTION_PT: &str = "Conceder experiência para os Ids especificados";
 
-    pub async fn run_slash<'a>(bot: &impl AsBot, id_tags: &str, value: i64) -> Result<Vec<Response<'a>>> {
+    pub async fn run_slash(bot: &impl AsBot, id_tags: &str, value: i64) -> Result<Responses> {
         let mut blueprints = Vec::new();
 
         let mut id_ms = Vec::new();
