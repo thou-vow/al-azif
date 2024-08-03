@@ -2,9 +2,9 @@ use crate::_prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Player {
-    pub tag:               FixedString,
-    pub owned_ids_tags:    HashSet<FixedString>,
-    pub borrowed_ids_tags: HashSet<FixedString>,
+    pub tag:               FixedString<u8>,
+    pub owned_ids_tags:    HashSet<FixedString<u8>>,
+    pub borrowed_ids_tags: HashSet<FixedString<u8>>,
 }
 impl Player {
     pub fn new(tag: impl AsRef<str>) -> Self { Player::_new(tag.as_ref()) }

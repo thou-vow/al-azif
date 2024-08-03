@@ -2,11 +2,11 @@ use crate::_prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Battle {
-    pub tag:                    FixedString,
-    pub opponents:              HashMap<FixedString, Opponent>,
+    pub tag:                    FixedString<u8>,
+    pub opponents:              HashMap<FixedString<u8>, Opponent>,
     pub turn_counter:           i64,
     pub phase_counter:          i64,
-    pub current_turn_owner_tag: FixedString,
+    pub current_turn_owner_tag: FixedString<u8>,
     pub current_moment:         Moment,
     pub turn_value_cap:         i64,
 }
@@ -136,7 +136,7 @@ impl Reflective for Battle {
 
 #[derive(Deserialize, Serialize)]
 pub struct Opponent {
-    pub tag:                                    FixedString,
+    pub tag:                                    FixedString<u8>,
     pub turn_value:                             i64,
     pub last_total_increased_turn_value_amount: i64,
 }
@@ -159,12 +159,12 @@ pub enum Moment {
 }
 #[derive(Clone, Deserialize, Serialize)]
 pub struct PrimaryMoment {
-    pub moment_owner_tag: FixedString,
+    pub moment_owner_tag: FixedString<u8>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ReactiveMoment {
-    pub primary_moment_owner_tag: FixedString,
-    pub primary_action_tag:       FixedString,
-    pub target_tags:              Vec<FixedString>,
+    pub primary_moment_owner_tag: FixedString<u8>,
+    pub primary_action_tag:       FixedString<u8>,
+    pub target_tags:              Vec<FixedString<u8>>,
     pub target_index:             usize,
 }

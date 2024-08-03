@@ -22,10 +22,10 @@ pub enum Error {
     #[error("Failed to convert string to reaction type: {str}")]
     FailedToConvertStringToReactionType { str: &'static str },
     #[error("Invalid action tag: {action_tag}")]
-    InvalidActionTag { action_tag: FixedString },
+    InvalidActionTag { action_tag: FixedString<u8> },
     #[error(
         "Could not infer user, as the reactive moment target tags index is out of bounds, the primary action tag: {primary_action_tag}, \
          the index: {index}"
     )]
-    ReactiveMomentTargetTagsIndexOutOfBounds { primary_action_tag: FixedString, index: usize },
+    ReactiveMomentTargetTagsIndexOutOfBounds { primary_action_tag: FixedString<u8>, index: usize },
 }

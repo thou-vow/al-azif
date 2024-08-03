@@ -18,7 +18,7 @@ pub enum Error {
     #[error("Could not get original interaction response, why: {0}")]
     CouldNotGetOriginalInteractionResponse(SerenityError),
     #[error("Could not parse component arg '{arg}' into type {into_type}")]
-    CouldNotParseComponentArgIntoType { arg: FixedString, into_type: &'static str },
+    CouldNotParseComponentArgIntoType { arg: FixedString<u8>, into_type: &'static str },
     #[error("Could not send message, why: {0}")]
     CouldNotSendMessage(SerenityError),
     #[error("Could not set commands, why: {0}")]
@@ -32,11 +32,11 @@ pub enum Error {
     #[error("Expected command option of name '{name}' to be of type '{expected_type}'")]
     ExpectedAnotherSlashCommandOptionType { name: &'static str, expected_type: &'static str },
     #[error("Invalid prefix command, name: {name}")]
-    InvalidPrefixCommand { name: FixedString },
+    InvalidPrefixCommand { name: FixedString<u8> },
     #[error("Invalid prefix component, custom id: {custom_id}")]
     InvalidPrefixComponent { custom_id: FixedString },
     #[error("Invalid slash command, name: {name}")]
-    InvalidSlashCommand { name: FixedString },
+    InvalidSlashCommand { name: FixedString<u8> },
     #[error("Invalid slash component, custom id: {custom_id}")]
     InvalidSlashComponent { custom_id: FixedString },
     #[error("Missing required slash command option of name: {name}")]

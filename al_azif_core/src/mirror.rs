@@ -1,6 +1,6 @@
 use crate::_prelude::*;
 
-pub type InMemoryStore<T> = Mutex<HashMap<FixedString, (Arc<RwLock<T>>, Instant)>>;
+pub type InMemoryStore<T> = Mutex<HashMap<FixedString<u8>, (Arc<RwLock<T>>, Instant)>>;
 
 pub struct Mirror<T: Reflective> {
     arc: Arc<RwLock<T>>,

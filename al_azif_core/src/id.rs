@@ -1,9 +1,9 @@
-use crate::{_prelude::*, effect};
+use crate::_prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Id {
-    pub tag:                  FixedString,
-    pub name:                 FixedString,
+    pub tag:                  FixedString<u8>,
+    pub name:                 FixedString<u8>,
     pub gender:               Gender,
     pub age:                  Age,
     pub lvl:                  i64,
@@ -20,8 +20,8 @@ pub struct Id {
     pub charisma:             i64,
     pub effects:              LinkedList<Effect>,
     pub color:                Option<u32>,
-    pub emoji:                Option<FixedString>,
-    pub current_battle_tag:   Option<FixedString>,
+    pub emoji:                Option<FixedString<u8>>,
+    pub current_battle_tag:   Option<FixedString<u8>>,
 }
 impl Id {
     pub fn new(tag: impl AsRef<str>) -> Self { Id::_new(tag.as_ref()) }
