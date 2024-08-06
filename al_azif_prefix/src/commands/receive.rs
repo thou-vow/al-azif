@@ -28,7 +28,7 @@ pub async fn run_component(bot: &impl AsBot, comp: &ComponentInteraction, args: 
     Ok(vec![Response::send_loose(run(setting).await?)])
 }
 
-async fn run(setting: Setting<'_, impl AsBot, FoundBattle, FoundReactiveMoment, FoundUser, Empty, Empty>) -> Result<Blueprints> {
+async fn run(setting: Setting<'_, impl AsBot, FBattle, FReactiveMoment, FUser, Empty, Empty>) -> Result<Blueprints> {
     let mut blueprints = Vec::new();
 
     let emitter_m = Mirror::<Id>::get(setting.bot, setting.get_primary_moment_owner_tag()).await?;

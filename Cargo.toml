@@ -14,31 +14,30 @@ al_azif_events.path = "./al_azif_events"
 al_azif_prefix.path = "./al_azif_prefix"
 al_azif_slash.path = "./al_azif_slash"
 anyhow = "1.0.86"
-serde_json = { version = "1.0.121", default-features = false }
 const_format = "0.2.32"
-dotenvy = { version = "0.15.7", default-features = false }
 rand = { version = "0.8.5", default-features = false }
 serde = { version = "1.0.204", default-features = false }
 serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next", default-features = false, features = ["client", "gateway", "model", "rustls_backend"] }
 small-fixed-array = { version = "0.4.5", default-features = false }
 thiserror = "1.0.63"
 tokio = { version = "1.39.2", features = ["rt-multi-thread"] }
+toml = "0.8.19"
 tracing = { version = "0.1.40", default-features = false }
 tracing-subscriber = { version = "0.3.18", default-features = false, features = ["fmt"] }
 
 [package]
-name = "al-azif"
+name = "al_azif"
 edition.workspace = true
 
 [dependencies]
 al_azif_core.workspace = true
 al_azif_events.workspace = true
 anyhow.workspace = true
-dotenvy.workspace = true
 serde.workspace = true
 serenity.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+toml.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
@@ -50,3 +49,7 @@ strip = true
 opt-level = 3
 codegen-units = 1
 lto = true
+
+[[bin]]
+name = "al_azif"
+path = "src/main.rs"

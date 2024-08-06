@@ -138,7 +138,13 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) ->
         }
     };
 
-    let responses = execution_result?;
+    let responses = match execution_result {
+        Ok(responses) => responses,
+        Err(EventError::Slash(SlashError::Expected(blueprints))) => {
+            vec![Response::send_and_delete(blueprints)]
+        },
+        Err(err) => return Err(err),
+    };
 
     perform_responses(ctx, slash, responses).await
 }

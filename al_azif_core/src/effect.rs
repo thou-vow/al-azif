@@ -181,7 +181,7 @@ impl AsEffect for BlockEffect {
         ))
     }
 
-    fn lose_effect_text(&self, bot: &impl AsBot, id_name: &str) -> Option<String> { None }
+    fn lose_effect_text(&self, _bot: &impl AsBot, _id_name: &str) -> Option<String> { None }
 
     fn summary(&self, bot: &impl AsBot) -> Cow<'static, str> {
         lang_diff!(bot,
@@ -212,7 +212,7 @@ impl AsEffect for FaintEffect {
         ))
     }
 
-    fn lose_effect_text(&self, bot: &impl AsBot, id_name: &str) -> Option<String> { None }
+    fn lose_effect_text(&self, _bot: &impl AsBot, _id_name: &str) -> Option<String> { None }
 
     fn summary(&self, bot: &impl AsBot) -> Cow<'static, str> {
         lang_diff!(bot,
@@ -317,8 +317,8 @@ impl AsEffect for MiracleEffect {
 
     fn summary(&self, bot: &impl AsBot) -> Cow<'static, str> {
         lang_diff!(bot,
-            en: fc!("Immediately restores **1** {HP_SHORT} when hit by decisive damage and then expires."),
-            pt: fc!("Restaura imediamente **1** {HP_SHORT_PT} quando atingido por um dano decisivo e depois expira.")
+            en: "Immediately receive **1** of healing when hit by decisive damage and then expires.",
+            pt: "Recebe imediatamente **1** de cura quando atingido por um dano decisivo e depois expira."
         )
         .into()
     }

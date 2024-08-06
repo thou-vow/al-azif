@@ -1,7 +1,16 @@
 use crate::prelude::*;
 
-pub fn load() { dotenv().ok(); }
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Config {
+    pub discord_bot_token:  FixedString<u8>,
+    pub discord_main_guild: GuildId,
+}
+impl Config {
+    pub fn load() -> Result<Self> {
+        let serialized = fs::read_to_string("config.toml")?;
 
-pub fn get_bot_token() -> Result<String> { Ok(env::var("DISCORD_BOT_TOKEN")?) }
+        let config = toml::from_str(&serialized)?;
 
-pub fn get_main_guild() -> Result<GuildId> { Ok(env::var("DISCORD_MAIN_GUILD")?.parse()?) }
+        Ok(config)
+    }
+}

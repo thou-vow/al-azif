@@ -13,6 +13,8 @@ use crate::_prelude::*;
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error("An expected error")]
+    Expected(Blueprints),
     #[error(transparent)]
     Core(#[from] CoreError),
     #[error("Could not create response, why: {0}")]

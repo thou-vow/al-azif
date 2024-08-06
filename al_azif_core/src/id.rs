@@ -435,12 +435,12 @@ impl Id {
 
         for effect in acting_effects {
             blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
-                en: f!("{} | **{}** restored **1** {HP_SHORT} due to the **{}** effect.",
+                en: f!("{} | **{}** received **1** of healing due to the **{}** effect.",
                     MiracleEffect::EMOJI,
                     self.name,
                     MiracleEffect::NAME,
                 ),
-                pt: f!("{} | **{}** restaurou **1** {HP_SHORT_PT} devido ao efeito **{}**.",
+                pt: f!("{} | **{}** recebeu **1** de cura devido ao efeito **{}**.",
                     MiracleEffect::EMOJI,
                     self.name,
                     MiracleEffect::NAME_PT,

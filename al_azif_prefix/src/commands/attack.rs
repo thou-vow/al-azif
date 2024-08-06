@@ -5,13 +5,17 @@ pub const NAME_PT: &str = "atacar";
 
 pub async fn run_prefix(bot: &impl AsBot, msg: &Message, args: VecDeque<&str>) -> Result<Responses> {
     let setting = Setting::new(bot, args)
-        .fetch_battle(msg.channel_id.to_string()).await?
-        .require_primary_moment().await?
-        .fetch_user().await?
+        .fetch_battle(msg.channel_id.to_string())
+        .await?
+        .require_primary_moment()
+        .await?
+        .fetch_user()
+        .await?
         .fetch_targets([lang_diff!(bot,
             en: "You need to specify the target.",
             pt: "Você precisa especificar o alvo."
-        )]).await?
+        )])
+        .await?
         .unallow_any_self_target(lang_diff!(bot,
             en: "You can't attack yourself.",
             pt: "Você não pode atacar a si mesmo(a)."

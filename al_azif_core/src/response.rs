@@ -108,15 +108,3 @@ impl ResponseBlueprint {
 pub fn simple_send(new_content: impl Into<Cow<'static, str>>) -> Vec<Response> {
     vec![Response::Send { blueprints: vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }] }]
 }
-
-pub fn simple_send_and_delete(new_content: impl Into<Cow<'static, str>>) -> Vec<Response> {
-    vec![Response::SendAndDelete { blueprints: vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }] }]
-}
-
-pub fn simple_send_and_delete_with_original(new_content: impl Into<Cow<'static, str>>) -> Vec<Response> {
-    Response::send_and_delete_with_original(vec![ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() }])
-}
-
-pub fn simple_send_ephemeral(new_content: impl Into<Cow<'static, str>>) -> Vec<Response> {
-    vec![Response::SendEphemeral { blueprint: ResponseBlueprint { new_content: Some(new_content.into()), ..Default::default() } }]
-}

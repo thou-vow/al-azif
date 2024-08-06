@@ -1,16 +1,7 @@
-# IDE directories and folders
-.vscode/
-
-# Target directory
-target/
-
-# Lockfile
+.vscode
+target
 Cargo.lock
 
-# Secrets
-.env
-assets/music/*
-database/battles/*
-database/ids/*
-database/players/*
+config.toml
+database
 tests

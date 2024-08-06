@@ -1,0 +1,10 @@
+services:
+    bot:
+        image: thou-vow/al-azif
+        volumes:
+          - type: bind
+            source: ./config.toml
+            target: /config.toml
+          - type: bind
+            source: ./database
+            target: /database
