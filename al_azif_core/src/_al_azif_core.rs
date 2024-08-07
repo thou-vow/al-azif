@@ -1,5 +1,4 @@
-#![feature(decl_macro, linked_list_cursors)]
-
+pub mod _macros;
 pub mod _prelude;
 pub mod battle;
 pub mod bot;

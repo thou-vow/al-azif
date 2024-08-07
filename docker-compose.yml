@@ -1,5 +1,5 @@
 services:
-    bot:
+    al_azif:
         image: thou-vow/al-azif
         volumes:
           - type: bind

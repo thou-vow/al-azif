@@ -48,7 +48,7 @@ pub fn execute(bot: &impl AsBot, emitter: &mut Id, target: &mut Id) -> Blueprint
     let mut blueprints = Vec::new();
     let mut damage = damage_evaluation(emitter);
 
-    let (modified_damage, more_blueprints) = emitter.effects_when_attacking_with_primary_action(bot, damage, target);
+    let (modified_damage, more_blueprints) = effect::at_primary_action_attack(bot, emitter, target, damage);
     blueprints.extend(more_blueprints);
     damage = modified_damage;
 
@@ -62,4 +62,4 @@ pub fn execute(bot: &impl AsBot, emitter: &mut Id, target: &mut Id) -> Blueprint
     blueprints
 }
 
-fn damage_evaluation(attacker: &Id) -> i64 { attacker.might + attacker.evaluate_might_bonuses() }
+fn damage_evaluation(emitter: &Id) -> i64 { emitter.evaluate_total_might() }

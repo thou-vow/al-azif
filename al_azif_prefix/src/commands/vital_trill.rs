@@ -45,11 +45,11 @@ pub async fn run_prefix(bot: &impl AsBot, msg: &Message, args: VecDeque<&str>) -
     Ok(vec![Response::send(blueprints)])
 }
 
-pub fn execute(bot: &impl AsBot, attacker: &mut Id, target: &mut Id) -> Blueprints {
+pub fn execute(bot: &impl AsBot, emitter: &mut Id, target: &mut Id) -> Blueprints {
     let mut blueprints = Vec::new();
-    let mut damage = damage_evaluation(attacker);
+    let mut damage = damage_evaluation(emitter);
 
-    let (modified_damage, more_blueprints) = attacker.effects_when_attacking_with_primary_action(bot, damage, target);
+    let (modified_damage, more_blueprints) = effect::at_primary_action_attack(bot, emitter, target, damage);
     blueprints.extend(more_blueprints);
     damage = modified_damage;
 
@@ -64,4 +64,4 @@ pub fn execute(bot: &impl AsBot, attacker: &mut Id, target: &mut Id) -> Blueprin
     blueprints
 }
 
-fn damage_evaluation(attacker: &Id) -> i64 { attacker.might + attacker.evaluate_might_bonuses() }
+fn damage_evaluation(emitter: &Id) -> i64 { emitter.evaluate_total_might() }

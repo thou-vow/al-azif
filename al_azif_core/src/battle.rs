@@ -3,7 +3,7 @@ use crate::_prelude::*;
 #[derive(Deserialize, Serialize)]
 pub struct Battle {
     pub tag:                    FixedString<u8>,
-    pub opponents:              HashMap<FixedString<u8>, Opponent>,
+    pub opponents:              Vec<Opponent>,
     pub turn_counter:           i64,
     pub phase_counter:          i64,
     pub current_turn_owner_tag: FixedString<u8>,
@@ -16,7 +16,7 @@ impl Battle {
     fn _new(tag: &str) -> Self {
         Self {
             tag:                    FixedString::from_str_trunc(tag),
-            opponents:              HashMap::new(),
+            opponents:              Vec::new(),
             turn_counter:           0,
             phase_counter:          0,
             current_turn_owner_tag: FixedString::from_static_trunc(""),
@@ -29,8 +29,11 @@ impl Battle {
     pub async fn advance(&mut self, bot: &impl AsBot) -> Result<Blueprints> {
         let mut blueprints = Vec::new();
 
-        if let Some(current_turn_owner_tag) =
-            self.opponents.contains_key(&self.current_turn_owner_tag).then(|| self.current_turn_owner_tag.clone())
+        if let Some(current_turn_owner_tag) = self
+            .opponents
+            .iter()
+            .find(|opponent| opponent.tag == self.current_turn_owner_tag)
+            .map(|opponent| &opponent.tag)
         {
             blueprints.extend(Mirror::<Id>::get(bot, &current_turn_owner_tag).await?.write().await.end_turn(bot, self).await?);
             blueprints.push(ResponseBlueprint::new().set_content("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"));
@@ -38,14 +41,14 @@ impl Battle {
 
         loop {
             let mut mov_values = Vec::new();
-            for id_tag in self.opponents.keys() {
-                let id_m = Mirror::<Id>::get(bot, id_tag).await?;
+            for opponent in self.opponents.iter() {
+                let id_m = Mirror::<Id>::get(bot, &opponent.tag).await?;
                 let id = id_m.read().await;
                 mov_values.push(id.movement);
             }
             self.turn_value_cap = *mov_values.iter().max_by(|x, y| x.cmp(y)).unwrap();
 
-            if let Some(next_turn_owner_tag) = self.get_next_turn_owner().map(FixedString::from_str_trunc) {
+            if let Some(next_turn_owner_tag) = self.get_next_turn_owner().map(ToOwned::to_owned) {
                 blueprints.extend(Mirror::<Id>::get(bot, &next_turn_owner_tag).await?.write().await.start_turn(self).await?);
                 self.turn_counter += 1;
                 self.current_turn_owner_tag = next_turn_owner_tag.clone();
@@ -64,8 +67,8 @@ impl Battle {
     async fn start_next_phase(&mut self, bot: &impl AsBot) -> Result<Blueprints> {
         let mut blueprints = Vec::new();
 
-        for (id_tag, opponent) in &mut self.opponents {
-            let id_m = Mirror::<Id>::get(bot, id_tag).await?;
+        for opponent in self.opponents.iter_mut() {
+            let id_m = Mirror::<Id>::get(bot, &opponent.tag).await?;
             let id = id_m.read().await;
             opponent.add_turn_value(id.movement);
         }
@@ -78,17 +81,18 @@ impl Battle {
     pub async fn generate_turn_screen(&mut self, bot: &impl AsBot) -> Result<ResponseBlueprint> {
         let mut new_desc = String::new();
 
-        for (id_tag, opponent) in &mut self.opponents {
+        for opponent in self.opponents.iter_mut() {
             let number_of_filled_squares = (opponent.turn_value * 7 / self.turn_value_cap).clamp(0, 7) as usize;
             let filled_portion = "⬜".repeat(number_of_filled_squares);
             let empty_portion = "⬛".repeat(7 - number_of_filled_squares);
 
-            let id_m = Mirror::<Id>::get(bot, id_tag).await?;
+            let id_m = Mirror::<Id>::get(bot, &opponent.tag).await?;
             let id = id_m.read().await;
 
             new_desc += &f!(
-                "**{}** `{id_tag}`\n{filled_portion}{empty_portion}  **{}** / **{}**",
+                "**{}** `{}`\n{filled_portion}{empty_portion}  **{}** / **{}**",
                 id.name,
+                opponent.tag,
                 mark_thousands(opponent.turn_value),
                 mark_thousands(self.turn_value_cap)
             );
@@ -111,10 +115,10 @@ impl Battle {
         Ok(ResponseBlueprint::new().set_embeds(vec![new_embed]))
     }
 
-    fn get_next_turn_owner(&self) -> Option<&str> {
+    fn get_next_turn_owner(&self) -> Option<&FixedString<u8>> {
         self.opponents
             .iter()
-            .max_by(|(_, opponent1), (_, opponent2)| {
+            .max_by(|opponent1, opponent2| {
                 let order = opponent1.turn_value.cmp(&opponent2.turn_value);
                 if order == Ordering::Equal {
                     if rand::thread_rng().gen_bool(0.5) {
@@ -124,8 +128,8 @@ impl Battle {
                 }
                 order
             })
-            .filter(|(_, opponent)| opponent.turn_value >= self.turn_value_cap)
-            .map(|(id_tag, _)| id_tag.as_ref())
+            .filter(|opponent| opponent.turn_value >= self.turn_value_cap)
+            .map(|opponent| &opponent.tag)
     }
 }
 impl Reflective for Battle {

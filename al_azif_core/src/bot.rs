@@ -32,10 +32,3 @@ pub enum Lang {
     En,
     Pt,
 }
-
-pub macro lang_diff($bot:expr, en: $en:expr, pt: $pt:expr) {{
-    match $bot.get_lang() {
-        Lang::En => $en,
-        Lang::Pt => $pt,
-    }
-}}

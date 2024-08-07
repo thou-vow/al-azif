@@ -166,10 +166,3 @@ pub async fn perform_responses(ctx: &Context, comp: &ComponentInteraction, respo
 
     Ok(())
 }
-
-macro parse_comp_arg($arg:expr, $t:ty) {
-    $arg.parse::<$t>().map_err(|_| EventError::CouldNotParseComponentArgIntoType {
-        arg:       FixedString::from_str_trunc($arg),
-        into_type: stringify!($t),
-    })
-}

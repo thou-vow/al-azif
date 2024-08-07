@@ -18,7 +18,7 @@ pub struct Id {
     pub dexterity:            i64,
     pub cognition:            i64,
     pub charisma:             i64,
-    pub effects:              LinkedList<Effect>,
+    pub effects:              Vec<Effect>,
     pub color:                Option<u32>,
     pub emoji:                Option<FixedString<u8>>,
     pub current_battle_tag:   Option<FixedString<u8>>,
@@ -44,7 +44,7 @@ impl Id {
             dexterity:            5,
             cognition:            5,
             charisma:             5,
-            effects:              LinkedList::new(),
+            effects:              Vec::new(),
             color:                None,
             emoji:                None,
             current_battle_tag:   None,
@@ -64,7 +64,7 @@ impl Id {
             last_total_increased_turn_value_amount: self.movement,
         };
 
-        battle.opponents.insert(self.tag.clone(), opponent);
+        battle.opponents.push(opponent);
 
         self.current_battle_tag = Some(battle.tag.clone());
     }
@@ -80,10 +80,15 @@ impl Id {
     pub async fn end_turn(&mut self, bot: &impl AsBot, battle: &mut Battle) -> Result<Blueprints> {
         let mut blueprints = Vec::new();
 
-        battle.opponents.get_mut(&self.tag).unwrap().sub_turn_value(battle.turn_value_cap);
+        battle
+            .opponents
+            .iter_mut()
+            .find(|opponent| opponent.tag == self.tag)
+            .unwrap()
+            .sub_turn_value(battle.turn_value_cap);
 
         blueprints.push(ResponseBlueprint::new().set_content(f!("🏁 | Fim do turno de **{}**.", self.name)));
-        blueprints.extend(self.effects_on_turn_end(bot, battle));
+        blueprints.extend(effect::on_turn_end(bot, self));
 
         Ok(blueprints)
     }
@@ -95,14 +100,13 @@ impl Id {
             blueprints.push(ResponseBlueprint::new().set_content(acquire_effect_text));
         }
 
-        self.effects.push_back(new_effect.into());
+        self.effects.push(new_effect.into());
 
         blueprints
     }
 
     pub fn receive_damage(&mut self, bot: &impl AsBot, damage: i64) -> Blueprints {
         let mut blueprints = Vec::new();
-        let mut cursor = self.effects.cursor_front_mut();
 
         // TODO: for shield absorption
 
@@ -200,18 +204,14 @@ impl Id {
     pub fn faint(&mut self, bot: &impl AsBot) -> Blueprints {
         let mut blueprints = self.acquire_effect(bot, FaintEffect);
 
-        blueprints.extend(self.effects_on_fainting(bot));
+        blueprints.extend(effect::on_faint(bot, self));
 
         // Lose Faint effect if alive somehow after effects
         if self.hp > 0 {
-            let mut cursor = self.effects.cursor_back_mut();
-            while let Some(effect) = cursor.current() {
-                match effect {
-                    Effect::Faint(_) => {
-                        cursor.remove_current();
-                        break;
-                    },
-                    _ => cursor.move_next(),
+            for i in 0 .. self.effects.len() {
+                if let Effect::Faint(FaintEffect) = self.effects[i] {
+                    self.effects.remove(i);
+                    break;
                 }
             }
         }
@@ -220,240 +220,7 @@ impl Id {
     }
 }
 impl Id {
-    pub fn evaluate_might_bonuses(&self) -> i64 {
-        let mut bonuses = 0;
-
-        for effect in self.effects.iter() {
-            match effect {
-                Effect::Rise(rise) => {
-                    bonuses += rise.might_bonus;
-                },
-                _ => (),
-            }
-        }
-
-        bonuses
-    }
-
-    pub fn effects_on_action_end(&mut self, bot: &impl AsBot) -> Blueprints {
-        let mut blueprints = Vec::new();
-        let mut cursor = self.effects.cursor_front_mut();
-
-        let mut acting_effects = Vec::new();
-
-        while let Some(effect) = cursor.current() {
-            let mut remove_effect = false;
-
-            match effect {
-                Effect::Bleed(bleed) => {
-                    acting_effects.push(Effect::Bleed(bleed.clone()));
-                },
-                _ => (),
-            }
-
-            if remove_effect {
-                cursor.remove_current();
-            } else {
-                cursor.move_next();
-            }
-        }
-
-        for effect in acting_effects {
-            match effect {
-                Effect::Bleed(bleed) => {
-                    blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
-                        en: f!("{} | **{}** received **{}** damage due to the **{}** effect.",
-                            BleedEffect::EMOJI,
-                            self.name,
-                            mark_thousands(bleed.damage_over_turn),
-                            BleedEffect::NAME,
-                        ),
-                        pt: f!("{} | **{}** recebeu **{}** de dano devido ao efeito **{}**.",
-                            BleedEffect::EMOJI,
-                            self.name,
-                            mark_thousands(bleed.damage_over_turn),
-                            BleedEffect::NAME_PT,
-                        )
-                    )));
-                    blueprints.extend(self.receive_damage(bot, bleed.damage_over_turn));
-                },
-                _ => (),
-            }
-        }
-
-        blueprints
-    }
-
-    pub fn effects_on_turn_end(&mut self, bot: &impl AsBot, _battle: &mut Battle) -> Blueprints {
-        let mut blueprints = Vec::new();
-        let mut cursor = self.effects.cursor_front_mut();
-
-        let mut acting_effects = Vec::new();
-
-        while let Some(effect) = cursor.current() {
-            let mut remove_effect = false;
-
-            match effect {
-                Effect::Bleed(bleed) => {
-                    acting_effects.push(Effect::Bleed(bleed.clone()));
-
-                    if bleed.turn_duration <= 0 {
-                        remove_effect = true;
-                    } else {
-                        bleed.turn_duration -= 1;
-                    }
-                },
-                Effect::HealingOverTime(healing_over_time) => {
-                    acting_effects.push(Effect::HealingOverTime(healing_over_time.clone()));
-
-                    if healing_over_time.turn_duration <= 0 {
-                        remove_effect = true;
-                    } else {
-                        healing_over_time.turn_duration -= 1;
-                    }
-                },
-                Effect::Rise(rise) => {
-                    acting_effects.push(Effect::Rise(rise.clone()));
-
-                    if rise.turn_duration <= 0 {
-                        remove_effect = true;
-                    } else {
-                        rise.turn_duration -= 1;
-                    }
-                },
-                _ => (),
-            }
-
-            if remove_effect {
-                cursor.remove_current();
-            } else {
-                cursor.move_next();
-            }
-        }
-
-        for effect in acting_effects {
-            match effect {
-                Effect::Bleed(bleed) => {
-                    if bleed.turn_duration <= 0 {
-                        blueprints.push(ResponseBlueprint::new().set_content(bleed.lose_effect_text(bot, &self.name).unwrap()));
-                    }
-                },
-                Effect::HealingOverTime(healing) => {
-                    blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
-                        en: f!("{} | **{}** received **{}** of healing due to the **{}** effect.",
-                            HealingOverTimeEffect::EMOJI,
-                            self.name,
-                            mark_thousands(healing.healing_over_turn),
-                            HealingOverTimeEffect::NAME,
-                        ),
-                        pt: f!("{} | **{}** recebeu **{}** de cura devido ao efeito **{}**.",
-                            HealingOverTimeEffect::EMOJI,
-                            self.name,
-                            mark_thousands(healing.healing_over_turn),
-                            HealingOverTimeEffect::NAME_PT,
-                        )
-                    )));
-                    blueprints.extend(self.restore_health(bot, healing.healing_over_turn));
-
-                    if healing.turn_duration <= 0 {
-                        blueprints.push(ResponseBlueprint::new().set_content(healing.lose_effect_text(bot, &self.name).unwrap()));
-                    }
-                },
-                Effect::Rise(rise) => {
-                    if rise.turn_duration <= 0 {
-                        blueprints.push(ResponseBlueprint::new().set_content(rise.lose_effect_text(bot, &self.name).unwrap()));
-                    }
-                },
-                _ => (),
-            }
-        }
-
-        blueprints
-    }
-
-    pub fn effects_when_attacking_with_primary_action(&mut self, bot: &impl AsBot, mut damage: i64, target: &mut Id) -> (i64, Blueprints) {
-        let mut _blueprints = Vec::new();
-        let mut _cursor = self.effects.cursor_front_mut();
-
-        let mut cursor = target.effects.cursor_front_mut();
-        let mut acting_effects = Vec::new();
-
-        while let Some(effect) = cursor.current() {
-            let mut remove_effect = false;
-
-            match effect {
-                Effect::Block(block) => {
-                    acting_effects.push(Effect::Block(block.clone()));
-                    remove_effect = true;
-                },
-                _ => (),
-            }
-
-            if remove_effect {
-                cursor.remove_current();
-            } else {
-                cursor.move_next();
-            }
-        }
-
-        for effect in acting_effects {
-            match effect {
-                Effect::Block(_) => {
-                    damage /= 2;
-                },
-                _ => (),
-            }
-        }
-
-        (damage, _blueprints)
-    }
-
-    pub fn effects_on_fainting(&mut self, bot: &impl AsBot) -> Blueprints {
-        let mut blueprints = Vec::new();
-        let mut cursor = self.effects.cursor_front_mut();
-
-        let mut acting_effects = Vec::new();
-
-        while let Some(effect) = cursor.current() {
-            let mut remove_effect = false;
-
-            match effect {
-                Effect::Miracle(miracle) => {
-                    acting_effects.push(miracle.clone());
-
-                    remove_effect = true;
-                },
-                _ => (),
-            }
-
-            if remove_effect {
-                cursor.remove_current();
-            } else {
-                cursor.move_next();
-            }
-        }
-
-        for effect in acting_effects {
-            blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
-                en: f!("{} | **{}** received **1** of healing due to the **{}** effect.",
-                    MiracleEffect::EMOJI,
-                    self.name,
-                    MiracleEffect::NAME,
-                ),
-                pt: f!("{} | **{}** recebeu **1** de cura devido ao efeito **{}**.",
-                    MiracleEffect::EMOJI,
-                    self.name,
-                    MiracleEffect::NAME_PT,
-                )
-            )));
-            blueprints.extend(self.restore_health(bot, 1));
-            blueprints.push(ResponseBlueprint::new().set_content(effect.lose_effect_text(bot, &self.name).unwrap()));
-        }
-
-        // Todo: Loose effects if still down
-
-        blueprints
-    }
+    pub fn evaluate_total_might(&self) -> i64 { self.might + effect::evaluate_might_bonuses(self) }
 }
 impl Reflective for Id {
     const FOLDER_PATH: &'static str = "./database/ids";

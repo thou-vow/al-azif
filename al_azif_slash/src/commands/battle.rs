@@ -55,8 +55,8 @@ pub mod end {
         };
 
         let battle = battle_m.read().await;
-        for id_tag in battle.opponents.keys() {
-            let id_m = Mirror::<Id>::get(bot, id_tag).await?;
+        for opponent in battle.opponents.iter() {
+            let id_m = Mirror::<Id>::get(bot, &opponent.tag).await?;
             let mut id = id_m.write().await;
             id.current_battle_tag = None;
         }

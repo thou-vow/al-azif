@@ -1,5 +1,4 @@
-#![feature(decl_macro)]
-
+pub mod _macros;
 pub mod _prelude;
 pub mod component;
 pub mod prefix;

@@ -1,5 +1,3 @@
-#![feature(decl_macro)]
-
 pub mod commands {
     pub mod battle;
     pub mod exp;

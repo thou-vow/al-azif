@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use crate::_prelude::*;
 
 pub struct Empty;
@@ -197,7 +199,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, FReactiveMoment, Empty, Empty, Em
             Some(tag) => {
                 let tag = FixedString::from_str_trunc(tag);
 
-                if !self.battle_state.m.read().await.opponents.contains_key(&tag) {
+                if !self.battle_state.m.read().await.opponents.iter().any(|opponent| opponent.tag == tag) {
                     return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                         en: "You are not in the battle.",
                         pt: "Você não está na batalha."
@@ -239,7 +241,7 @@ impl<'a, Bot: AsBot, MomentS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, 
         mut self,
         missing_target_arg_messages: [&'static str; LEN],
     ) -> Result<Setting<'a, Bot, FBattle, MomentS, FUser, FTargets<'a, LEN>, Empty, ReservedArgsS, Empty>> {
-        let mut tags_and_ms: [Option<(&'a str, Mirror<Id>)>; LEN] = [(); LEN].map(|_| None);
+        let mut tags_and_ms: [Option<(&'a str, Mirror<Id>)>; LEN] = [const { None }; LEN];
 
         let battle = self.battle_state.m.read().await;
 
@@ -253,7 +255,7 @@ impl<'a, Bot: AsBot, MomentS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, 
                         ))]));
                     };
 
-                    if !battle.opponents.contains_key(tag) {
+                    if !battle.opponents.iter().any(|opponent| opponent.tag == tag) {
                         return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                             en: f!("The Id `{tag}` is not in the battle."),
                             pt: f!("O Id `{tag}` não está na batalha.")
@@ -291,7 +293,7 @@ impl<'a, Bot: AsBot, MomentS, TargetsS, ReservedArgsS> Setting<'a, Bot, FBattle,
     pub async fn fetch_optional_targets<const LEN: usize>(
         mut self,
     ) -> Result<Setting<'a, Bot, FBattle, MomentS, FUser, TargetsS, FOptionalTargets<'a, LEN>, ReservedArgsS>> {
-        let mut tags_and_ms: [Option<(&'a str, Mirror<Id>)>; LEN] = [(); LEN].map(|_| None);
+        let mut tags_and_ms: [Option<(&'a str, Mirror<Id>)>; LEN] = [const { None }; LEN];
 
         let battle = self.battle_state.m.read().await;
 
@@ -304,7 +306,7 @@ impl<'a, Bot: AsBot, MomentS, TargetsS, ReservedArgsS> Setting<'a, Bot, FBattle,
                     ))]));
                 };
 
-                if !battle.opponents.contains_key(tag) {
+                if !battle.opponents.iter().any(|opponent| opponent.tag == tag) {
                     return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                         en: f!("The Id `{tag}` is not in the battle."),
                         pt: f!("O Id `{tag}` não está na batalha.")

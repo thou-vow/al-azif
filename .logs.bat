@@ -1,1 +1,1 @@
-docker-compose logs bot
+docker-compose logs al_azif

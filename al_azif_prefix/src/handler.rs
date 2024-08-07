@@ -8,8 +8,8 @@ pub fn execute_primary_action(bot: &impl AsBot, action_tag: &str, emitter: &mut 
         _ => return Err(PrefixError::InvalidActionTag { action_tag: FixedString::from_str_trunc(action_tag) }),
     };
 
-    blueprints.extend(emitter.effects_on_action_end(bot));
-    blueprints.extend(target.effects_on_action_end(bot));
+    blueprints.extend(effect::on_action_end(bot, emitter));
+    blueprints.extend(effect::on_action_end(bot, target));
 
     Ok(blueprints)
 }
