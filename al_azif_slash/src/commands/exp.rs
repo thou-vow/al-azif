@@ -1,18 +1,18 @@
 use crate::_prelude::*;
 
-pub const NAME: &str = "exp";
+pub const TAG: &str = "exp";
 pub const DESCRIPTION: &str = "About experience";
-pub const NAME_PT: &str = "exp";
+pub const TAG_PT: &str = "exp";
 pub const DESCRIPTION_PT: &str = "Sobre experiência";
 
 pub fn register() -> CreateCommand<'static> {
-    CreateCommand::new(NAME)
+    CreateCommand::new(TAG)
         .description(DESCRIPTION)
-        .name_localized("pt-BR", NAME_PT)
+        .name_localized("pt-BR", TAG_PT)
         .description_localized("pt-BR", "Sobre experiência")
         .add_option(
-            CreateCommandOption::new(CommandOptionType::SubCommand, bestow::NAME, bestow::DESCRIPTION)
-                .name_localized("pt-BR", bestow::NAME_PT)
+            CreateCommandOption::new(CommandOptionType::SubCommand, bestow::TAG, bestow::DESCRIPTION)
+                .name_localized("pt-BR", bestow::TAG_PT)
                 .description_localized("pt-BR", bestow::DESCRIPTION_PT)
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to bestow")
@@ -32,9 +32,9 @@ pub fn register() -> CreateCommand<'static> {
 pub mod bestow {
     use super::*;
 
-    pub const NAME: &str = "bestow";
+    pub const TAG: &str = "bestow";
     pub const DESCRIPTION: &str = "Grant experience to the specified Ids";
-    pub const NAME_PT: &str = "conceder";
+    pub const TAG_PT: &str = "conceder";
     pub const DESCRIPTION_PT: &str = "Conceder experiência para os Ids especificados";
 
     pub async fn run_slash(bot: &impl AsBot, id_tags: &str, value: i64) -> Result<Responses> {
@@ -53,7 +53,7 @@ pub mod bestow {
 
         if !invalid_id_tags.is_empty() {
             let new_content = if invalid_id_tags.len() > 1 {
-                let concat_tags = join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                let concat_tags = join_with_and(&invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
                 lang_diff!(bot,
                     en: f!("The Ids {concat_tags} were not found."),
                     pt: f!("Os Ids {concat_tags} não foram encontrados.")

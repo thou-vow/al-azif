@@ -1,6 +1,6 @@
 use crate::_prelude::*;
 
-pub type InMemoryStore<T> = Mutex<HashMap<FixedString<u8>, (Arc<RwLock<T>>, Instant)>>;
+pub type InMemoryStore<T> = Mutex<AHashMap<FixedString<u8>, (Arc<RwLock<T>>, Instant)>>;
 
 pub struct Mirror<T: Reflective> {
     arc: Arc<RwLock<T>>,
@@ -63,6 +63,7 @@ impl<T: Reflective> Clone for Mirror<T> {
     fn clone(&self) -> Self { Self { arc: self.arc.clone() } }
 }
 
+#[derive(Debug)]
 pub struct ReadMirror<'a, T: Reflective> {
     guard: RwLockReadGuard<'a, T>,
 }
@@ -75,6 +76,7 @@ impl<'a, T: Reflective> Deref for ReadMirror<'a, T> {
     fn deref(&self) -> &Self::Target { &self.guard }
 }
 
+#[derive(Debug)]
 pub struct WriteMirror<'a, T: Reflective> {
     guard: Option<RwLockWriteGuard<'a, T>>,
 }
@@ -98,6 +100,7 @@ impl<'a, T: Reflective> DerefMut for WriteMirror<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target { self.guard.as_deref_mut().unwrap() }
 }
 impl<'a, T: Reflective> Drop for WriteMirror<'a, T> {
+    #[instrument(skip(self))]
     fn drop(&mut self) {
         let Some(guard) = &self.guard else {
             return;
@@ -106,5 +109,26 @@ impl<'a, T: Reflective> Drop for WriteMirror<'a, T> {
         if let Err(why) = database::set(&**guard) {
             error!("WriteMirror drop error: {why:?}");
         }
+    }
+}
+
+#[instrument]
+pub async fn data_flush_routine(in_memory_database: Arc<InMemoryDatabase>) {
+    loop {
+        tokio::time::sleep(DATA_FLUSH_ROUTINE).await;
+
+        let now = Instant::now();
+
+        in_memory_database
+            .battles
+            .lock()
+            .await
+            .retain(|_, (_, last_accessed)| now - *last_accessed < DATA_EXPIRE_TIME);
+        in_memory_database.ids.lock().await.retain(|_, (_, last_accessed)| now - *last_accessed < DATA_EXPIRE_TIME);
+        in_memory_database
+            .players
+            .lock()
+            .await
+            .retain(|_, (_, last_accessed)| now - *last_accessed < DATA_EXPIRE_TIME);
     }
 }

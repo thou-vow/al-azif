@@ -1,0 +1,28 @@
+services:
+  debug:
+    image: thou-vow/al-azif:debug
+    container_name: al-azif-debug
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.debug
+    volumes:
+      - type: bind
+        source: ../config.toml
+        target: /config.toml
+      - type: bind
+        source: ../database
+        target: /database
+  release:
+    image: thou-vow/al-azif:release
+    container_name: al-azif-release
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.release
+    volumes:
+      - type: bind
+        source: ../config.toml
+        target: /config.toml
+      - type: bind
+        source: ../database
+        target: /database
+    

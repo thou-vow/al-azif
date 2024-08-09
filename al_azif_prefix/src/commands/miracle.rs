@@ -1,7 +1,7 @@
 use crate::_prelude::*;
 
-pub const NAME: &str = "miracle";
-pub const NAME_PT: &str = "milagre";
+pub const TAG: &str = "miracle";
+pub const TAG_PT: &str = "milagre";
 
 pub async fn run_prefix(bot: &impl AsBot, msg: &Message, args: VecDeque<&str>) -> Result<Responses> {
     let setting = Setting::new(bot, args)

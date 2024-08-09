@@ -1,6 +1,6 @@
 use crate::_prelude::*;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Battle {
     pub tag:                    FixedString<u8>,
     pub opponents:              Vec<Opponent>,
@@ -49,7 +49,7 @@ impl Battle {
             self.turn_value_cap = *mov_values.iter().max_by(|x, y| x.cmp(y)).unwrap();
 
             if let Some(next_turn_owner_tag) = self.get_next_turn_owner().map(ToOwned::to_owned) {
-                blueprints.extend(Mirror::<Id>::get(bot, &next_turn_owner_tag).await?.write().await.start_turn(self).await?);
+                blueprints.extend(Mirror::<Id>::get(bot, &next_turn_owner_tag).await?.write().await.start_turn(bot, self).await?);
                 self.turn_counter += 1;
                 self.current_turn_owner_tag = next_turn_owner_tag.clone();
                 self.current_moment = Moment::Primary(PrimaryMoment { moment_owner_tag: next_turn_owner_tag });
@@ -138,7 +138,7 @@ impl Reflective for Battle {
     fn get_tag(&self) -> &str { self.tag.as_ref() }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Opponent {
     pub tag:                                    FixedString<u8>,
     pub turn_value:                             i64,
@@ -156,16 +156,16 @@ impl Opponent {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum Moment {
     Primary(PrimaryMoment),
     Reactive(ReactiveMoment),
 }
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PrimaryMoment {
     pub moment_owner_tag: FixedString<u8>,
 }
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ReactiveMoment {
     pub primary_moment_owner_tag: FixedString<u8>,
     pub primary_action_tag:       FixedString<u8>,

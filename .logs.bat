@@ -1,1 +1,0 @@
-docker-compose logs al_azif

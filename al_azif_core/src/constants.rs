@@ -2,8 +2,8 @@ pub use crate::_prelude::*;
 
 pub const PREFIX: &str = "!";
 
-pub const CACHE_FLUSH_ROUTINE: Duration = Duration::from_secs(800);
-pub const CACHE_EXPIRE_TIME: Duration = Duration::from_secs(1200);
+pub const DATA_FLUSH_ROUTINE: Duration = Duration::from_secs(800);
+pub const DATA_EXPIRE_TIME: Duration = Duration::from_secs(1200);
 pub const RESPONSE_INTERVAL: Duration = Duration::from_millis(200);
 pub const RESPONSE_TIMEOUT: Duration = Duration::from_secs(10);
 pub const DELETE_INTERVAL: Duration = Duration::from_secs(1);

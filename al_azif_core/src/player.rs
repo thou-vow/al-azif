@@ -1,6 +1,6 @@
 use crate::_prelude::*;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Player {
     pub tag:               FixedString<u8>,
     pub owned_ids_tags:    HashSet<FixedString<u8>>,

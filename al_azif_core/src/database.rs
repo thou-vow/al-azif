@@ -14,7 +14,7 @@ pub enum Error {
     CannotWriteFile(io::Error),
 }
 
-pub trait Reflective: for<'de> Deserialize<'de> + Send + Serialize + Sync {
+pub trait Reflective: Debug + for<'de> Deserialize<'de> + Send + Serialize + Sync {
     const FOLDER_PATH: &'static str;
     fn get_tag(&self) -> &str;
 }

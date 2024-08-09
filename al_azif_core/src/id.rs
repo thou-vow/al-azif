@@ -1,6 +1,6 @@
 use crate::_prelude::*;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Id {
     pub tag:                  FixedString<u8>,
     pub name:                 FixedString<u8>,
@@ -69,10 +69,13 @@ impl Id {
         self.current_battle_tag = Some(battle.tag.clone());
     }
 
-    pub async fn start_turn(&mut self, _battle: &mut Battle) -> Result<Blueprints> {
+    pub async fn start_turn(&mut self, bot: &impl AsBot, _battle: &mut Battle) -> Result<Blueprints> {
         let mut blueprints = Vec::new();
 
-        blueprints.push(ResponseBlueprint::new().set_content(f!("🕒 | Agora é a vez de **{}**.", self.name)));
+        blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
+            en: f!("🕒 | It's now **{}**'s turn.", self.name),
+            pt: f!("🕒 | Agora é a vez de **{}**.", self.name),
+        )));
 
         Ok(blueprints)
     }
@@ -87,7 +90,10 @@ impl Id {
             .unwrap()
             .sub_turn_value(battle.turn_value_cap);
 
-        blueprints.push(ResponseBlueprint::new().set_content(f!("🏁 | Fim do turno de **{}**.", self.name)));
+        blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
+            en: f!("🏁 | End of **{}**'s turn.", self.name),
+            pt: f!("🏁 | Fim do turno de **{}**.", self.name),
+        )));
         blueprints.extend(effect::on_turn_end(bot, self));
 
         Ok(blueprints)
@@ -166,35 +172,29 @@ impl Id {
         let previous_hp = self.hp;
         self.hp = (self.hp + amount).clamp(0, self.constitution * 10);
 
+        let mut new_content = f!(
+            "```ansi\n\u{001b}[0;40m{}: \u{001b}[0;40;{}m{}",
+            lang_diff!(bot, en: HP_SHORT, pt: HP_SHORT_PT),
+            match previous_hp * 100 / (self.constitution * 10) {
+                .. 33 => 31,
+                33 .. 66 => 33,
+                _ => 32,
+            },
+            mark_thousands(previous_hp)
+        );
         if previous_hp != self.hp {
-            blueprints.push(ResponseBlueprint::new().set_content(f!(
-                "```ansi\n\u{001b}[0;40m{}: \u{001b}[0;40;{}m{}\u{001b}[0;40m → \u{001b}[0;40;{}m{}```",
-                lang_diff!(bot, en: HP_SHORT, pt: HP_SHORT_PT),
-                match previous_hp * 100 / (self.constitution * 10) {
-                    .. 33 => 31,
-                    33 .. 66 => 33,
-                    _ => 32,
-                },
-                mark_thousands(previous_hp),
+            new_content.push_str(&f!(
+                "\u{001b}[0;40m → \u{001b}[0;40;{}m{}",
                 match self.hp * 100 / (self.constitution * 10) {
                     .. 33 => 31,
                     33 .. 66 => 33,
                     _ => 32,
                 },
                 mark_thousands(self.hp),
-            )));
-        } else {
-            blueprints.push(ResponseBlueprint::new().set_content(f!(
-                "```ansi\n\u{001b}[0;40m{}: \u{001b}[0;40;{}m{}```",
-                lang_diff!(bot, en: HP_SHORT, pt: HP_SHORT_PT),
-                match self.hp * 100 / (self.constitution * 10) {
-                    .. 33 => 31,
-                    33 .. 66 => 33,
-                    _ => 32,
-                },
-                mark_thousands(self.hp),
-            )));
+            ));
         }
+        new_content.push_str("```");
+        blueprints.push(ResponseBlueprint::new().set_content(new_content));
 
         // Todo: Effects after restoring HP
 
@@ -228,14 +228,14 @@ impl Reflective for Id {
     fn get_tag(&self) -> &str { self.tag.as_ref() }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum Gender {
     Other,
     Female,
     Male,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum Age {
     Child,
     Teen,

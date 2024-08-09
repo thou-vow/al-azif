@@ -13,6 +13,7 @@ al_azif_core.path = "./al_azif_core"
 al_azif_events.path = "./al_azif_events"
 al_azif_prefix.path = "./al_azif_prefix"
 al_azif_slash.path = "./al_azif_slash"
+ahash = { version = "0.8.11", default-features = false, features = ["compile-time-rng", "serde", "std"] }
 anyhow = "1.0.86"
 const_format = "0.2.32"
 rand = { version = "0.8.5", default-features = false }
@@ -23,7 +24,7 @@ thiserror = "1.0.63"
 tokio = { version = "1.39.2", features = ["rt-multi-thread"] }
 toml = "0.8.19"
 tracing = { version = "0.1.40", default-features = false }
-tracing-subscriber = { version = "0.3.18", default-features = false, features = ["fmt"] }
+tracing-subscriber = { version = "0.3.18", default-features = false, features = ["ansi", "fmt"] }
 
 [package]
 name = "al_azif"

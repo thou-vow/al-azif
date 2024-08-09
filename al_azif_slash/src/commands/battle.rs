@@ -1,23 +1,23 @@
 use crate::_prelude::*;
 
-pub const NAME: &str = "battle";
+pub const TAG: &str = "battle";
 pub const DESCRIPTION: &str = "About battle";
-pub const NAME_PT: &str = "batalha";
+pub const TAG_PT: &str = "batalha";
 pub const DESCRIPTION_PT: &str = "Sobre batalha";
 
 pub fn register() -> CreateCommand<'static> {
-    CreateCommand::new(NAME)
+    CreateCommand::new(TAG)
         .description(DESCRIPTION)
-        .name_localized("pt-BR", NAME_PT)
+        .name_localized("pt-BR", TAG_PT)
         .description_localized("pt-BR", DESCRIPTION_PT)
         .add_option(
-            CreateCommandOption::new(CommandOptionType::SubCommand, end::NAME, end::DESCRIPTION)
-                .name_localized("pt-BR", end::NAME_PT)
+            CreateCommandOption::new(CommandOptionType::SubCommand, end::TAG, end::DESCRIPTION)
+                .name_localized("pt-BR", end::TAG_PT)
                 .description_localized("pt-BR", end::DESCRIPTION_PT),
         )
         .add_option(
-            CreateCommandOption::new(CommandOptionType::SubCommand, join::NAME, join::DESCRIPTION)
-                .name_localized("pt-BR", join::NAME_PT)
+            CreateCommandOption::new(CommandOptionType::SubCommand, join::TAG, join::DESCRIPTION)
+                .name_localized("pt-BR", join::TAG_PT)
                 .description_localized("pt-BR", join::DESCRIPTION_PT)
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to join")
@@ -26,8 +26,8 @@ pub fn register() -> CreateCommand<'static> {
                 ),
         )
         .add_option(
-            CreateCommandOption::new(CommandOptionType::SubCommand, start::NAME, start::DESCRIPTION)
-                .name_localized("pt-BR", start::NAME_PT)
+            CreateCommandOption::new(CommandOptionType::SubCommand, start::TAG, start::DESCRIPTION)
+                .name_localized("pt-BR", start::TAG_PT)
                 .description_localized("pt-BR", start::DESCRIPTION_PT)
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::String, "ids", "The Ids to join")
@@ -40,9 +40,9 @@ pub fn register() -> CreateCommand<'static> {
 pub mod end {
     use super::*;
 
-    pub const NAME: &str = "end";
+    pub const TAG: &str = "end";
     pub const DESCRIPTION: &str = "End the battle";
-    pub const NAME_PT: &str = "terminar";
+    pub const TAG_PT: &str = "terminar";
     pub const DESCRIPTION_PT: &str = "Encerrar a batalha";
 
     pub async fn run_slash(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Responses> {
@@ -73,9 +73,9 @@ pub mod end {
 pub mod join {
     use super::*;
 
-    pub const NAME: &str = "join";
+    pub const TAG: &str = "join";
     pub const DESCRIPTION: &str = "Join Ids to the battle";
-    pub const NAME_PT: &str = "participar";
+    pub const TAG_PT: &str = "participar";
     pub const DESCRIPTION_PT: &str = "Integrar Ids na batalha";
 
     pub async fn run_slash(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Responses> {
@@ -106,7 +106,7 @@ pub mod join {
 
         if !invalid_id_tags.is_empty() {
             let new_content = if invalid_id_tags.len() > 1 {
-                let concat_tags = join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                let concat_tags = join_with_and(&invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
                 lang_diff!(bot,
                     en: f!("The Ids {concat_tags} were not found."),
                     pt: f!("Os Ids {concat_tags} não foram encontrados.")
@@ -123,7 +123,7 @@ pub mod join {
 
         if !already_in_battle_id_tags.is_empty() {
             let new_content = if already_in_battle_id_tags.len() > 1 {
-                let concat_tags = join_with_and(already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                let concat_tags = join_with_and(&already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
                 lang_diff!(bot,
                     en: f!("The Ids {concat_tags} are already in a battle."),
                     pt: f!("Os Ids {concat_tags } já estão em batalha.")
@@ -168,9 +168,9 @@ pub mod join {
 pub mod start {
     use super::*;
 
-    pub const NAME: &str = "start";
+    pub const TAG: &str = "start";
     pub const DESCRIPTION: &str = "Start a battle";
-    pub const NAME_PT: &str = "iniciar";
+    pub const TAG_PT: &str = "iniciar";
     pub const DESCRIPTION_PT: &str = "Iniciar uma batalha";
 
     pub async fn run_slash(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Vec<Response>> {
@@ -196,7 +196,7 @@ pub mod start {
 
         if !invalid_id_tags.is_empty() {
             let new_content = if invalid_id_tags.len() > 1 {
-                let concat_tags = join_with_and(invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                let concat_tags = join_with_and(&invalid_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
                 lang_diff!(bot,
                     en: f!("The Ids {concat_tags} were not found."),
                     pt: f!("Os Ids {concat_tags} não foram encontrados.")
@@ -213,7 +213,7 @@ pub mod start {
 
         if !already_in_battle_id_tags.is_empty() {
             let new_content = if already_in_battle_id_tags.len() > 1 {
-                let concat_tags = join_with_and(already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
+                let concat_tags = join_with_and(&already_in_battle_id_tags.iter().map(|tag| f!("`{tag}`")).collect::<Vec<String>>());
                 lang_diff!(bot,
                     en: f!("The Ids {concat_tags} are already in a battle."),
                     pt: f!("Os Ids {concat_tags } já estão em batalha.")

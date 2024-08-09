@@ -1,7 +1,7 @@
 use crate::_prelude::*;
 
-pub const NAME: &str = "attack";
-pub const NAME_PT: &str = "atacar";
+pub const TAG: &str = "attack";
+pub const TAG_PT: &str = "atacar";
 
 pub async fn run_prefix(bot: &impl AsBot, msg: &Message, args: VecDeque<&str>) -> Result<Responses> {
     let setting = Setting::new(bot, args)
@@ -16,7 +16,7 @@ pub async fn run_prefix(bot: &impl AsBot, msg: &Message, args: VecDeque<&str>) -
             pt: "Você precisa especificar o alvo."
         )])
         .await?
-        .unallow_any_self_target(lang_diff!(bot,
+        .unallow_any_self_required_target(lang_diff!(bot,
             en: "You can't attack yourself.",
             pt: "Você não pode atacar a si mesmo(a)."
         ))?;
@@ -25,7 +25,7 @@ pub async fn run_prefix(bot: &impl AsBot, msg: &Message, args: VecDeque<&str>) -
 
     let mut battle = setting.get_battle_mirror().write().await;
     let user = setting.get_user_mirror().read().await;
-    let target = setting.get_target_ms()[0].read().await;
+    let target = setting.get_required_target_ms()[0].read().await;
 
     blueprints.push(ResponseBlueprint::new().set_content(lang_diff!(bot,
         en: f!("{STRIKE_EMOJI} | **{}** will attack **{}**.", user.name, target.name),
@@ -36,7 +36,7 @@ pub async fn run_prefix(bot: &impl AsBot, msg: &Message, args: VecDeque<&str>) -
 
     battle.current_moment = Moment::Reactive(ReactiveMoment {
         primary_moment_owner_tag: user.tag.clone(),
-        primary_action_tag:       FixedString::from_static_trunc(NAME),
+        primary_action_tag:       FixedString::from_static_trunc(TAG),
         target_tags:              vec![target.tag.clone()],
         target_index:             0,
     });

@@ -13,13 +13,13 @@ pub struct FUser {
     tag: FixedString<u8>,
     m:   Mirror<Id>,
 }
-pub struct FTargets<'a, const LEN: usize> {
+pub struct FRequiredTargets<'a, const LEN: usize> {
     tags_and_ms: [(&'a str, Mirror<Id>); LEN],
 }
 pub struct FOptionalTargets<'a, const LEN: usize> {
     tags_and_ms: [Option<(&'a str, Mirror<Id>)>; LEN],
 }
-pub struct FReservedArgs<'a, const LEN: usize>([&'a str; LEN]);
+pub struct FRequiredReservedArgs<'a, const LEN: usize>([&'a str; LEN]);
 pub struct FOptionalReservedArgs<'a, const LEN: usize>([Option<&'a str>; LEN]);
 
 pub struct Setting<
@@ -28,7 +28,7 @@ pub struct Setting<
     BattleS = Empty,
     MomentS = Empty,
     UserS = Empty,
-    TargetsS = Empty,
+    RequiredTargetsS = Empty,
     OptionalTargetsS = Empty,
     ReservedArgsS = Empty,
     OptionalReservedArgsS = Empty,
@@ -38,7 +38,7 @@ pub struct Setting<
     battle_state:                 BattleS,
     moment_state:                 MomentS,
     user_state:                   UserS,
-    targets_state:                TargetsS,
+    required_targets_state:                RequiredTargetsS,
     optional_targets_state:       OptionalTargetsS,
     reserved_args_state:          ReservedArgsS,
     optional_reserved_args_state: OptionalReservedArgsS,
@@ -53,7 +53,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, Empty, Empty, Empty, Empty, Empty, Empty> 
             battle_state: Empty,
             moment_state: Empty,
             user_state: Empty,
-            targets_state: Empty,
+            required_targets_state: Empty,
             optional_targets_state: Empty,
             reserved_args_state: Empty,
             optional_reserved_args_state: Empty,
@@ -76,7 +76,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, Empty, Empty, Empty, Empty, Empty, Empty> 
             battle_state:                 FBattle { tag, m },
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            targets_state:                self.targets_state,
+            required_targets_state:                self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -105,7 +105,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, Empty, Empty, Empty, Empty, Empty
             battle_state:                 self.battle_state,
             moment_state:                 FPrimaryMoment(primary),
             user_state:                   self.user_state,
-            targets_state:                self.targets_state,
+            required_targets_state:                self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -131,7 +131,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, Empty, Empty, Empty, Empty, Empty
             battle_state:                 self.battle_state,
             moment_state:                 FReactiveMoment(reactive.clone()),
             user_state:                   self.user_state,
-            targets_state:                self.targets_state,
+            required_targets_state:                self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -175,7 +175,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, FPrimaryMoment, Empty, Empty, Emp
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   FUser { tag, m },
-            targets_state:                self.targets_state,
+            required_targets_state:                self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -227,7 +227,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, FReactiveMoment, Empty, Empty, Em
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   FUser { tag, m },
-            targets_state:                self.targets_state,
+            required_targets_state:                self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -240,7 +240,7 @@ impl<'a, Bot: AsBot, MomentS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, 
     pub async fn fetch_targets<const LEN: usize>(
         mut self,
         missing_target_arg_messages: [&'static str; LEN],
-    ) -> Result<Setting<'a, Bot, FBattle, MomentS, FUser, FTargets<'a, LEN>, Empty, ReservedArgsS, Empty>> {
+    ) -> Result<Setting<'a, Bot, FBattle, MomentS, FUser, FRequiredTargets<'a, LEN>, Empty, ReservedArgsS, Empty>> {
         let mut tags_and_ms: [Option<(&'a str, Mirror<Id>)>; LEN] = [const { None }; LEN];
 
         let battle = self.battle_state.m.read().await;
@@ -280,7 +280,7 @@ impl<'a, Bot: AsBot, MomentS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, 
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            targets_state:                FTargets { tags_and_ms },
+            required_targets_state:                FRequiredTargets { tags_and_ms },
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -289,10 +289,10 @@ impl<'a, Bot: AsBot, MomentS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, 
 }
 
 // Battle: found,   Moment: any,   User: found,   Targets: any,   Optional Targets: empty   Reserved Args: any   Optional Reserved Args: empty
-impl<'a, Bot: AsBot, MomentS, TargetsS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, FUser, TargetsS, Empty, ReservedArgsS, Empty> {
+impl<'a, Bot: AsBot, MomentS, RequiredTargetsS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, FUser, RequiredTargetsS, Empty, ReservedArgsS, Empty> {
     pub async fn fetch_optional_targets<const LEN: usize>(
         mut self,
-    ) -> Result<Setting<'a, Bot, FBattle, MomentS, FUser, TargetsS, FOptionalTargets<'a, LEN>, ReservedArgsS>> {
+    ) -> Result<Setting<'a, Bot, FBattle, MomentS, FUser, RequiredTargetsS, FOptionalTargets<'a, LEN>, ReservedArgsS>> {
         let mut tags_and_ms: [Option<(&'a str, Mirror<Id>)>; LEN] = [const { None }; LEN];
 
         let battle = self.battle_state.m.read().await;
@@ -325,7 +325,7 @@ impl<'a, Bot: AsBot, MomentS, TargetsS, ReservedArgsS> Setting<'a, Bot, FBattle,
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            targets_state:                self.targets_state,
+            required_targets_state:                self.required_targets_state,
             optional_targets_state:       FOptionalTargets { tags_and_ms },
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -334,8 +334,8 @@ impl<'a, Bot: AsBot, MomentS, TargetsS, ReservedArgsS> Setting<'a, Bot, FBattle,
 }
 
 // Battle: found,   Moment: any,   User: any,   Targets: any,   Optional Targets: any   Reserved Args: any   Optional Reserved Args: any
-impl<'a, Bot: AsBot, MomentS, UserS, TargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, FBattle, MomentS, UserS, TargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
+impl<'a, Bot: AsBot, MomentS, UserS, RequiredTargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, FBattle, MomentS, UserS, RequiredTargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
 {
     pub fn get_battle_tag(&self) -> &FixedString<u8> { &self.battle_state.tag }
 
@@ -343,8 +343,8 @@ impl<'a, Bot: AsBot, MomentS, UserS, TargetsS, OptionalTargetsS, ReservedArgsS, 
 }
 
 // Battle: any,   Moment: reactive,   User: any,   Targets: any,   Optional Targets: any   Reserved Args: any   Optional Reserved Args: any
-impl<'a, Bot: AsBot, BattleS, UserS, TargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, FReactiveMoment, UserS, TargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
+impl<'a, Bot: AsBot, BattleS, UserS, RequiredTargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, FReactiveMoment, UserS, RequiredTargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
 {
     pub fn get_primary_moment_owner_tag(&self) -> &FixedString<u8> { &self.moment_state.0.primary_moment_owner_tag }
 
@@ -353,10 +353,11 @@ impl<'a, Bot: AsBot, BattleS, UserS, TargetsS, OptionalTargetsS, ReservedArgsS, 
 
 // Battle: any,   Moment: any,   User: found,   Targets: found,   Optional Targets: found   Reserved Args: any   Optional Reserved Args: any
 impl<'a, Bot: AsBot, BattleS, MomentS, const L1: usize, const L2: usize, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, FUser, FTargets<'a, L1>, FOptionalTargets<'a, L2>, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, FUser, FRequiredTargets<'a, L1>, FOptionalTargets<'a, L2>, ReservedArgsS, OptionalReservedArgsS>
 {
+    /// If any of the targets (either required or optional) corresponds to the user, then return an error message
     pub fn unallow_any_self_any_target(self, error_message: &'static str) -> Result<Self> {
-        if self.targets_state.tags_and_ms.iter().any(|(tag, _)| *tag == self.user_state.tag) {
+        if self.required_targets_state.tags_and_ms.iter().any(|(tag, _)| *tag == self.user_state.tag) {
             return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
         }
 
@@ -376,18 +377,20 @@ impl<'a, Bot: AsBot, BattleS, MomentS, const L1: usize, const L2: usize, Reserve
 
 // Battle: any,   Moment: any,   User: found,   Targets: found,   Optional Targets: any   Reserved Args: any   Optional Reserved Args: any
 impl<'a, Bot: AsBot, BattleS, MomentS, const LEN: usize, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, FUser, FTargets<'a, LEN>, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, FUser, FRequiredTargets<'a, LEN>, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
 {
-    pub fn unallow_self_target<const INDEX: usize>(self, error_message: &'static str) -> Result<Self> {
-        if self.targets_state.tags_and_ms[INDEX].0 == self.user_state.tag {
+    /// If the required target of index INDEX corresponds to the user, then return an error message
+    pub fn unallow_self_required_target<const INDEX: usize>(self, error_message: &'static str) -> Result<Self> {
+        if self.required_targets_state.tags_and_ms[INDEX].0 == self.user_state.tag {
             return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
         }
 
         Ok(self)
     }
 
-    pub fn unallow_any_self_target(self, error_message: &'static str) -> Result<Self> {
-        if self.targets_state.tags_and_ms.iter().any(|(tag, _)| *tag == self.user_state.tag) {
+    /// If any of the required targets corresponds to the user, then return an error message
+    pub fn unallow_any_self_required_target(self, error_message: &'static str) -> Result<Self> {
+        if self.required_targets_state.tags_and_ms.iter().any(|(tag, _)| *tag == self.user_state.tag) {
             return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
         }
 
@@ -396,11 +399,11 @@ impl<'a, Bot: AsBot, BattleS, MomentS, const LEN: usize, OptionalTargetsS, Reser
 }
 
 // Battle: any,   Moment: any,   User: found,   Targets: any,   Optional Targets: empty   Reserved Args: empty   Optional Reserved Args: empty
-impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS> Setting<'a, Bot, BattleS, MomentS, FUser, TargetsS, Empty, Empty, Empty> {
+impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS> Setting<'a, Bot, BattleS, MomentS, FUser, RequiredTargetsS, Empty, Empty, Empty> {
     pub fn fetch_reserved_args<const LEN: usize>(
         mut self,
         missing_reserved_arg_messages: [&'static str; LEN],
-    ) -> Result<Setting<'a, Bot, BattleS, MomentS, FUser, TargetsS, Empty, FReservedArgs<'a, LEN>, Empty>> {
+    ) -> Result<Setting<'a, Bot, BattleS, MomentS, FUser, RequiredTargetsS, Empty, FRequiredReservedArgs<'a, LEN>, Empty>> {
         let mut reserved_args: [Option<&'a str>; LEN] = [(); LEN].map(|_| None);
 
         for i in 0 .. LEN {
@@ -418,21 +421,21 @@ impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS> Setting<'a, Bot, BattleS, Momen
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            targets_state:                self.targets_state,
+            required_targets_state:                self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
-            reserved_args_state:          FReservedArgs(reserved_args),
+            reserved_args_state:          FRequiredReservedArgs(reserved_args),
             optional_reserved_args_state: self.optional_reserved_args_state,
         })
     }
 }
 
 // Battle: any,   Moment: any,   User: found,   Targets: any,   Optional Targets: empty   Reserved Args: any   Optional Reserved Args: empty
-impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS, ReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, FUser, TargetsS, Empty, ReservedArgsS, Empty>
+impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS, ReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, FUser, RequiredTargetsS, Empty, ReservedArgsS, Empty>
 {
     pub fn fetch_optional_reserved_args<const LEN: usize>(
         mut self,
-    ) -> Result<Setting<'a, Bot, BattleS, MomentS, FUser, TargetsS, Empty, ReservedArgsS, FOptionalReservedArgs<'a, LEN>>> {
+    ) -> Result<Setting<'a, Bot, BattleS, MomentS, FUser, RequiredTargetsS, Empty, ReservedArgsS, FOptionalReservedArgs<'a, LEN>>> {
         let mut reserved_args: [Option<&'a str>; LEN] = [(); LEN].map(|_| None);
 
         for reserved_arg in reserved_args.iter_mut() {
@@ -447,7 +450,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS, ReservedArgsS>
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            targets_state:                self.targets_state,
+            required_targets_state:                self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: FOptionalReservedArgs(reserved_args),
@@ -456,9 +459,10 @@ impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS, ReservedArgsS>
 }
 
 // Battle: any,   Moment: any,   User: found,   Targets: any,   Optional Targets: found   Reserved Args: any   Optional Reserved Args: any
-impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS, const LEN: usize, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, FUser, TargetsS, FOptionalTargets<'a, LEN>, ReservedArgsS, OptionalReservedArgsS>
+impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS, const LEN: usize, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, FUser, RequiredTargetsS, FOptionalTargets<'a, LEN>, ReservedArgsS, OptionalReservedArgsS>
 {
+    /// If the optional target of index INDEX corresponds to the user, then return an error message
     pub fn unallow_self_optional_target<const INDEX: usize>(self, error_message: &'static str) -> Result<Self> {
         if let Some((target_tag, _)) = &self.optional_targets_state.tags_and_ms[INDEX] {
             if *target_tag == self.user_state.tag {
@@ -469,6 +473,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS, const LEN: usize, ReservedArgsS
         Ok(self)
     }
 
+    /// If any of the optional targets corresponds to the user, then return an error message
     pub fn unallow_any_self_optional_target(self, error_message: &'static str) -> Result<Self> {
         if self
             .optional_targets_state
@@ -485,8 +490,8 @@ impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS, const LEN: usize, ReservedArgsS
 }
 
 // Battle: any,   Moment: any,   User: found,   Targets: any,   Optional Targets: any   Reserved Args: any   Optional Reserved Args: any
-impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, FUser, TargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
+impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, FUser, RequiredTargetsS, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
 {
     pub fn get_user_tag(&self) -> &FixedString<u8> { &self.user_state.tag }
 
@@ -495,13 +500,50 @@ impl<'a, Bot: AsBot, BattleS, MomentS, TargetsS, OptionalTargetsS, ReservedArgsS
 
 // Battle: any,   Moment: any,   User: any,   Targets: found,   Optional Targets: found   Reserved Args: any   Optional Reserved Args: any
 impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, UserS, FTargets<'a, L1>, FOptionalTargets<'a, L2>, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, UserS, FRequiredTargets<'a, L1>, FOptionalTargets<'a, L2>, ReservedArgsS, OptionalReservedArgsS>
 {
-    pub fn unallow_any_n_any_target_repetitons<const N: usize>(self, error_message: &'static str) -> Result<Self> {
+    /// If there is at least 1 repetitions over all targets (either required and optional), return an error message
+    pub fn unallow_duplicate_target(self, error_message: &'static str) -> Result<Self> {
+        for i in 0 .. L1 {
+            for j in i + 1 .. L1 {
+                if self.required_targets_state.tags_and_ms[i].0 == self.required_targets_state.tags_and_ms[j].0 {
+                    return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                }
+            }
+            for j in 0 .. L2 {
+                if let Some((tag_j, _)) = &self.optional_targets_state.tags_and_ms[j] {
+                    if *tag_j == self.required_targets_state.tags_and_ms[i].0 {
+                            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        for i in 0 .. L2 {
+            for j in i + 1 .. L2 {
+                if let (Some((tag_i, _)), Some((tag_j, _))) =
+                    (&self.optional_targets_state.tags_and_ms[i], &self.optional_targets_state.tags_and_ms[j])
+                {
+                    if tag_i == tag_j {
+                            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        Ok(self)
+    }
+
+    /// If there is at least N repetitions over all targets (either required and optional), return an error message
+    pub fn unallow_any_n_target_repetitons<const N: usize>(self, error_message: &'static str) -> Result<Self> {
         for i in 0 .. L1 {
             let mut count = 0;
             for j in i + 1 .. L1 {
-                if self.targets_state.tags_and_ms[i].0 == self.targets_state.tags_and_ms[j].0 {
+                if self.required_targets_state.tags_and_ms[i].0 == self.required_targets_state.tags_and_ms[j].0 {
                     count += 1;
                     if count >= N {
                         return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
@@ -510,14 +552,15 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
             }
 
             for j in 0 .. L2 {
-                // To optimize further should break at None case
-                if let Some((target_tag, _)) = &self.optional_targets_state.tags_and_ms[j] {
-                    if *target_tag == self.targets_state.tags_and_ms[i].0 {
+                if let Some((tag_j, _)) = &self.optional_targets_state.tags_and_ms[j] {
+                    if *tag_j == self.required_targets_state.tags_and_ms[i].0 {
                         count += 1;
                         if count >= N {
                             return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
                         }
                     }
+                } else {
+                    break;
                 }
             }
         }
@@ -525,7 +568,6 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
         for i in 0 .. L2 {
             let mut count = 0;
             for j in i + 1 .. L2 {
-                // To optimize further should break when the second is a None case
                 if let (Some((tag_i, _)), Some((tag_j, _))) =
                     (&self.optional_targets_state.tags_and_ms[i], &self.optional_targets_state.tags_and_ms[j])
                 {
@@ -535,6 +577,8 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
                             return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
                         }
                     }
+                } else {
+                    break;
                 }
             }
         }
@@ -545,21 +589,23 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
 
 // Battle: any,   Moment: any,   User: any,   Targets: found,   Optional Targets: any   Reserved Args: any   Optional Reserved Args: any
 impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const LEN: usize, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, UserS, FTargets<'a, LEN>, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, UserS, FRequiredTargets<'a, LEN>, OptionalTargetsS, ReservedArgsS, OptionalReservedArgsS>
 {
-    pub fn unallow_duplicate_target<const I1: usize, const I2: usize>(self, error_message: &'static str) -> Result<Self> {
-        if self.targets_state.tags_and_ms[I1].0 == self.targets_state.tags_and_ms[I2].0 {
+    /// If these two required targets are the same (when both exists), return an error message
+    pub fn unallow_duplicate_required_target<const I1: usize, const I2: usize>(self, error_message: &'static str) -> Result<Self> {
+        if self.required_targets_state.tags_and_ms[I1].0 == self.required_targets_state.tags_and_ms[I2].0 {
             return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
         }
 
         Ok(self)
     }
 
-    pub fn unallow_any_n_target_repetitons<const N: usize>(self, error_message: &'static str) -> Result<Self> {
+    /// If there is at least N repetitions over all required targets, return an error message
+    pub fn unallow_any_n_required_target_repetitons<const N: usize>(self, error_message: &'static str) -> Result<Self> {
         for i in 0 .. LEN {
             let mut count = 0;
             for j in i + 1 .. LEN {
-                if self.targets_state.tags_and_ms[i].0 == self.targets_state.tags_and_ms[j].0 {
+                if self.required_targets_state.tags_and_ms[i].0 == self.required_targets_state.tags_and_ms[j].0 {
                     count += 1;
                     if count >= N {
                         return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
@@ -571,19 +617,19 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const LEN: usize, OptionalTargetsS
         Ok(self)
     }
 
-    pub fn get_target_tags_and_ms(&self) -> &[(&'a str, Mirror<Id>); LEN] { &self.targets_state.tags_and_ms }
+    pub fn get_required_target_tags_and_ms(&self) -> &[(&'a str, Mirror<Id>); LEN] { &self.required_targets_state.tags_and_ms }
 
-    pub fn get_target_tags(&self) -> [&'a str; LEN] {
+    pub fn get_required_target_tags(&self) -> [&'a str; LEN] {
         let mut tags: [&'a str; LEN] = unsafe { mem::zeroed() };
-        for (i, tags_and_ms) in self.targets_state.tags_and_ms.iter().enumerate() {
+        for (i, tags_and_ms) in self.required_targets_state.tags_and_ms.iter().enumerate() {
             tags[i] = tags_and_ms.0;
         }
         tags
     }
 
-    pub fn get_target_ms(&self) -> [&Mirror<Id>; LEN] {
+    pub fn get_required_target_ms(&self) -> [&Mirror<Id>; LEN] {
         let mut ms: [&Mirror<Id>; LEN] = unsafe { mem::zeroed() };
-        for (i, tags_and_ms) in self.targets_state.tags_and_ms.iter().enumerate() {
+        for (i, tags_and_ms) in self.required_targets_state.tags_and_ms.iter().enumerate() {
             ms[i] = &tags_and_ms.1;
         }
         ms
@@ -591,9 +637,10 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const LEN: usize, OptionalTargetsS
 }
 
 // Battle: any,   Moment: any,   User: any,   Targets: any,   Optional Targets: found   Reserved Args: any   Optional Reserved Args: any
-impl<'a, Bot: AsBot, BattleS, MomentS, UserS, TargetsS, const LEN: usize, ReservedArgsS, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, UserS, TargetsS, FOptionalTargets<'a, LEN>, ReservedArgsS, OptionalReservedArgsS>
+impl<'a, Bot: AsBot, BattleS, MomentS, UserS, RequiredTargetsS, const LEN: usize, ReservedArgsS, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, UserS, RequiredTargetsS, FOptionalTargets<'a, LEN>, ReservedArgsS, OptionalReservedArgsS>
 {
+    /// If these two optional targets are the same (when both exists), return an error message
     pub fn unallow_duplicate_optional_target<const I1: usize, const I2: usize>(self, error_message: &'static str) -> Result<Self> {
         if let (Some((tag_i, _)), Some((tag_j, _))) =
             (&self.optional_targets_state.tags_and_ms[I1], &self.optional_targets_state.tags_and_ms[I2])
@@ -606,6 +653,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, TargetsS, const LEN: usize, Reserv
         Ok(self)
     }
 
+    /// If there is at least N repetitions over all optional targets, return an error message
     pub fn unallow_any_n_optional_target_repetitons<const N: usize>(self, error_message: &'static str) -> Result<Self> {
         for i in 0 .. LEN {
             let mut count = 0;
@@ -646,15 +694,15 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, TargetsS, const LEN: usize, Reserv
 }
 
 // Battle: any   Moment: any   User: any   Targets: any   Optional Targets: any   Reserved Args: found   Optional Reserved Args: any
-impl<'a, Bot: AsBot, BattleS, MomentS, UserS, TargetsS, OptionalTargetsS, const LEN: usize, OptionalReservedArgsS>
-    Setting<'a, Bot, BattleS, MomentS, UserS, TargetsS, OptionalTargetsS, FReservedArgs<'a, LEN>, OptionalReservedArgsS>
+impl<'a, Bot: AsBot, BattleS, MomentS, UserS, RequiredTargetsS, OptionalTargetsS, const LEN: usize, OptionalReservedArgsS>
+    Setting<'a, Bot, BattleS, MomentS, UserS, RequiredTargetsS, OptionalTargetsS, FRequiredReservedArgs<'a, LEN>, OptionalReservedArgsS>
 {
     pub fn get_reserved_args(&self) -> &[&'a str; LEN] { &self.reserved_args_state.0 }
 }
 
 // Battle: any  Moment: any  User: any  Targets: any  Optional Targets: any  Reserved Args: any  Optional Reserved Args: found
-impl<'a, Bot: AsBot, BattleS, MomentS, UserS, TargetsS, OptionalTargetsS, ReservedArgsS, const LEN: usize>
-    Setting<'a, Bot, BattleS, MomentS, UserS, TargetsS, OptionalTargetsS, ReservedArgsS, FOptionalReservedArgs<'a, LEN>>
+impl<'a, Bot: AsBot, BattleS, MomentS, UserS, RequiredTargetsS, OptionalTargetsS, ReservedArgsS, const LEN: usize>
+    Setting<'a, Bot, BattleS, MomentS, UserS, RequiredTargetsS, OptionalTargetsS, ReservedArgsS, FOptionalReservedArgs<'a, LEN>>
 {
     pub fn get_optional_reserved_args(&self) -> &[Option<&'a str>; LEN] { &self.optional_reserved_args_state.0 }
 }

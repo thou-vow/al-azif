@@ -13,13 +13,13 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Result<()> {
     let args = args.collect();
 
     let execution_result = match name.to_lowercase().as_str() {
-        attack::NAME | attack::NAME_PT => attack::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
-        block::NAME | block::NAME_PT => block::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
-        heal::NAME | heal::NAME_PT => heal::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
-        miracle::NAME | miracle::NAME_PT => miracle::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
-        receive::NAME | receive::NAME_PT => receive::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
-        rise::NAME | rise::NAME_PT => rise::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
-        vital_trill::NAME | vital_trill::NAME_PT => vital_trill::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        attack::TAG | attack::TAG_PT => attack::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        block::TAG | block::TAG_PT => block::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        heal::TAG | heal::TAG_PT => heal::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        miracle::TAG | miracle::TAG_PT => miracle::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        receive::TAG | receive::TAG_PT => receive::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        rise::TAG | rise::TAG_PT => rise::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
+        vital_trill::TAG | vital_trill::TAG_PT => vital_trill::run_prefix(bot, msg, args).await.map_err(EventError::Prefix),
         _ => return Err(EventError::InvalidPrefixCommand { name: FixedString::from_str_trunc(name) }),
     };
 

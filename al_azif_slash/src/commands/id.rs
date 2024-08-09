@@ -1,18 +1,18 @@
 use crate::_prelude::*;
 
-pub const NAME: &str = "id";
+pub const TAG: &str = "id";
 pub const DESCRIPTION: &str = "About Id";
-pub const NAME_PT: &str = "id";
+pub const TAG_PT: &str = "id";
 pub const DESCRIPTION_PT: &str = "Sobre Id";
 
 pub fn register() -> CreateCommand<'static> {
-    CreateCommand::new(NAME)
+    CreateCommand::new(TAG)
         .description(DESCRIPTION)
-        .name_localized("pt-BR", NAME_PT)
+        .name_localized("pt-BR", TAG_PT)
         .description_localized("pt-BR", DESCRIPTION_PT)
         .add_option(
-            CreateCommandOption::new(CommandOptionType::SubCommand, distribute::NAME, distribute::DESCRIPTION)
-                .name_localized("pt-BR", distribute::NAME_PT)
+            CreateCommandOption::new(CommandOptionType::SubCommand, distribute::TAG, distribute::DESCRIPTION)
+                .name_localized("pt-BR", distribute::TAG_PT)
                 .description_localized("pt-BR", distribute::DESCRIPTION_PT)
                 .add_sub_option(
                     CreateCommandOption::new(CommandOptionType::String, "id", "The Id to distribute")
@@ -25,9 +25,9 @@ pub fn register() -> CreateCommand<'static> {
 pub mod distribute {
     use super::*;
 
-    pub const NAME: &str = "distribute";
+    pub const TAG: &str = "distribute";
     pub const DESCRIPTION: &str = "Distribute points to the attributes";
-    pub const NAME_PT: &str = "distribuir";
+    pub const TAG_PT: &str = "distribuir";
     pub const DESCRIPTION_PT: &str = "Distribuir pontos para os atributos";
 
     pub async fn run_slash(bot: &impl AsBot, id_tag: &str) -> Result<Responses> {

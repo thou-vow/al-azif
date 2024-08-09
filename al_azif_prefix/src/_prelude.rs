@@ -1,6 +1,6 @@
 pub use crate::{
     handler,
-    setting::{Empty, FBattle, FOptionalTargets, FPrimaryMoment, FReactiveMoment, FTargets, FUser, Setting},
+    setting::{Empty, FBattle, FOptionalTargets, FPrimaryMoment, FReactiveMoment, FRequiredTargets, FUser, Setting},
     Error as PrefixError,
 };
 pub use al_azif_core::_prelude::*;

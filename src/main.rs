@@ -5,11 +5,11 @@ pub mod prelude;
 use crate::prelude::*;
 
 fn main() {
-    env::set_var("RUST_LIB_BACKTRACE", "1");
+    env::set_var("RUST_BACKTRACE", "full");
 
-    let subscriber = Subscriber::builder().with_max_level(Level::DEBUG).finish();
+    let subscriber = tracing_subscriber::fmt().pretty().with_ansi(true).with_max_level(Level::DEBUG).finish();
 
-    subscriber::set_global_default(subscriber).unwrap();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let rt = Runtime::new().unwrap();
 
@@ -26,9 +26,9 @@ async fn try_main() -> Result<()> {
 
     let mut client = Client::builder(&config.discord_bot_token, intents)
         .event_handler(Bot {
-            lang:       Lang::Pt,
-            cache:      Arc::new(InMemoryDatabase::default()),
-            main_guild: config.discord_main_guild,
+            lang:               Lang::Pt,
+            in_memory_database: Arc::new(InMemoryDatabase::default()),
+            main_guild:         config.discord_main_guild,
         })
         .await?;
 

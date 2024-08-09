@@ -1,9 +1,9 @@
 use crate::prelude::*;
 
 pub struct Bot {
-    pub lang:       Lang,
-    pub cache:      Arc<InMemoryDatabase>,
-    pub main_guild: GuildId,
+    pub lang:               Lang,
+    pub in_memory_database: Arc<InMemoryDatabase>,
+    pub main_guild:         GuildId,
 }
 
 #[async_trait]
@@ -30,7 +30,7 @@ impl EventHandler for Bot {
 }
 
 impl AsBot for Bot {
-    fn get_cache(&self) -> Arc<InMemoryDatabase> { self.cache.clone() }
+    fn get_in_memory_database(&self) -> Arc<InMemoryDatabase> { self.in_memory_database.clone() }
 
     fn get_lang(&self) -> &Lang { &self.lang }
 
@@ -38,11 +38,11 @@ impl AsBot for Bot {
 }
 
 impl AsRef<InMemoryStore<Battle>> for Bot {
-    fn as_ref(&self) -> &InMemoryStore<Battle> { &self.cache.battles }
+    fn as_ref(&self) -> &InMemoryStore<Battle> { &self.in_memory_database.battles }
 }
 impl AsRef<InMemoryStore<Id>> for Bot {
-    fn as_ref(&self) -> &InMemoryStore<Id> { &self.cache.ids }
+    fn as_ref(&self) -> &InMemoryStore<Id> { &self.in_memory_database.ids }
 }
 impl AsRef<InMemoryStore<Player>> for Bot {
-    fn as_ref(&self) -> &InMemoryStore<Player> { &self.cache.players }
+    fn as_ref(&self) -> &InMemoryStore<Player> { &self.in_memory_database.players }
 }

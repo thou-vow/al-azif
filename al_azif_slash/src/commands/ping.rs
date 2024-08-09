@@ -1,8 +1,8 @@
 use crate::_prelude::*;
 
-pub const NAME: &str = "ping";
+pub const TAG: &str = "ping";
 pub const DESCRIPTION: &str = "Pong!";
-pub const NAME_PT: &str = "ping";
+pub const TAG_PT: &str = "ping";
 pub const DESCRIPTION_PT: &str = "Pong!";
 
 pub async fn run_slash(ctx: &Context, slash: &CommandInteraction) -> Result<Vec<Response>> {

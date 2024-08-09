@@ -4,4 +4,3 @@ pub use anyhow::Result;
 pub use serde::{Deserialize, Serialize};
 pub use std::env;
 pub use tokio::runtime::Runtime;
-pub use tracing_subscriber::fmt::Subscriber;

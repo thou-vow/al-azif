@@ -1,27 +1,17 @@
-use crate::_prelude::*;
+use crate::{_prelude::*, mirror};
 
 pub trait AsBot: AsRef<InMemoryStore<Battle>> + AsRef<InMemoryStore<Id>> + AsRef<InMemoryStore<Player>> {
-    fn get_cache(&self) -> Arc<InMemoryDatabase>;
+    fn get_in_memory_database(&self) -> Arc<InMemoryDatabase>;
     fn get_lang(&self) -> &Lang;
     fn get_main_guild(&self) -> &GuildId;
     fn spawn_flush_routine(&self) {
-        let cache = self.get_cache();
+        let in_memory_database = self.get_in_memory_database();
 
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(CACHE_FLUSH_ROUTINE).await;
-
-                let now = Instant::now();
-
-                cache.battles.lock().await.retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
-                cache.ids.lock().await.retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
-                cache.players.lock().await.retain(|_, (_, last_accessed)| now - *last_accessed < CACHE_EXPIRE_TIME);
-            }
-        });
+        tokio::spawn(mirror::data_flush_routine(in_memory_database));
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct InMemoryDatabase {
     pub battles: InMemoryStore<Battle>,
     pub ids:     InMemoryStore<Id>,

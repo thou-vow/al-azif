@@ -2,7 +2,7 @@
 
 use crate::_prelude::*;
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Effect {
     Bleed(BleedEffect),
     Block(BlockEffect),
@@ -97,7 +97,7 @@ impl From<RiseEffect> for Effect {
     fn from(rise: RiseEffect) -> Self { Self::Rise(rise) }
 }
 
-pub trait AsEffect: Clone + Into<Effect> {
+pub trait AsEffect: Clone + Debug + Into<Effect> {
     const EMOJI: &'static str;
     const NAME: &'static str;
     const NAME_PT: &'static str;
@@ -109,7 +109,7 @@ pub trait AsEffect: Clone + Into<Effect> {
 pub mod all {
     pub use super::*;
 
-    #[derive(Clone, Deserialize, Serialize)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct BleedEffect {
         pub damage_over_turn: i64,
         pub turn_duration:    i64,
@@ -166,7 +166,7 @@ pub mod all {
         }
     }
 
-    #[derive(Clone, Deserialize, Serialize)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct BlockEffect;
     impl AsEffect for BlockEffect {
         const EMOJI: &'static str = "🛡";
@@ -197,7 +197,7 @@ pub mod all {
         }
     }
 
-    #[derive(Clone, Deserialize, Serialize)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct FaintEffect;
     impl AsEffect for FaintEffect {
         const EMOJI: &'static str = "🪦";
@@ -228,7 +228,7 @@ pub mod all {
         }
     }
 
-    #[derive(Clone, Deserialize, Serialize)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct HealingOverTimeEffect {
         pub healing_over_turn: i64,
         pub turn_duration:     i64,
@@ -285,7 +285,7 @@ pub mod all {
         }
     }
 
-    #[derive(Clone, Deserialize, Serialize)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct MiracleEffect;
     impl AsEffect for MiracleEffect {
         const EMOJI: &'static str = "🌟";
@@ -329,7 +329,7 @@ pub mod all {
         }
     }
 
-    #[derive(Clone, Deserialize, Serialize)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct RiseEffect {
         pub might_bonus:   i64,
         pub turn_duration: i64,

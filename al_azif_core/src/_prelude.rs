@@ -16,6 +16,7 @@ pub use crate::{
     },
     Error as CoreError,
 };
+pub use ahash::{AHashMap, AHashSet};
 pub use const_format::formatcp as fc;
 pub use rand::Rng;
 pub use serde::{Deserialize, Serialize};
@@ -49,7 +50,7 @@ pub use std::{
     cmp::{max, min, Ordering, Reverse},
     collections::{HashMap, HashSet, LinkedList, VecDeque},
     convert::Infallible,
-    fmt::{self, Display, Formatter},
+    fmt::{self, Debug, Display, Formatter},
     format as f, fs,
     future::Future,
     io, iter, mem,
@@ -60,6 +61,6 @@ pub use std::{
 };
 pub use thiserror::Error;
 pub use tokio::sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
-pub use tracing::{debug, error, info, instrument, span, subscriber, trace, warn, Level};
+pub use tracing::{debug, error, info, instrument, span, trace, warn, Level};
 
 pub(crate) type Result<T> = std::result::Result<T, CoreError>;

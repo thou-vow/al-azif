@@ -42,7 +42,7 @@ pub async fn run_prefix(bot: &impl AsBot, ctx: &Context, comp: &ComponentInterac
     let args = args.collect();
 
     let execution_result = match name {
-        receive::NAME => receive::run_component(bot, comp, args).await.map_err(EventError::Prefix),
+        receive::TAG => receive::run_component(bot, comp, args).await.map_err(EventError::Prefix),
         _ => Err(EventError::InvalidPrefixComponent { custom_id: comp.data.custom_id.clone() }),
     };
 

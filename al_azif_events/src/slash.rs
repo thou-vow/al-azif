@@ -17,28 +17,28 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) ->
     use ResolvedValue as RV;
 
     let name = slash.data.name.as_str();
-    let options = slash.data.options();
+    let options: Vec<ResolvedOption> = slash.data.options();
 
     let execution_result = 'match_slash: {
         match name {
-            battle::NAME => match options.as_slice() {
-                [RO { name: battle::end::NAME, value: RV::SubCommand(_), .. }, ..] => {
+            battle::TAG => match options.as_slice() {
+                [RO { name: battle::end::TAG, value: RV::SubCommand(_), .. }, ..] => {
                     battle::end::run_slash(bot, slash).await.map_err(EventError::Slash)
                 },
-                [RO { name: battle::join::NAME, value: RV::SubCommand(args), .. }, ..] => {
+                [RO { name: battle::join::TAG, value: RV::SubCommand(args), .. }, ..] => {
                     let mut iter = args.iter();
                     let ids = parse_slash_arg!('match_slash, iter, "ids", &str);
                     battle::join::run_slash(bot, slash, ids).await.map_err(EventError::Slash)
                 },
-                [RO { name: battle::start::NAME, value: RV::SubCommand(args), .. }, ..] => {
+                [RO { name: battle::start::TAG, value: RV::SubCommand(args), .. }, ..] => {
                     let mut iter = args.iter();
                     let ids = parse_slash_arg!('match_slash, iter, "ids", &str);
                     battle::start::run_slash(bot, slash, ids).await.map_err(EventError::Slash)
                 },
                 _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
             },
-            exp::NAME => match options.as_slice() {
-                [RO { name: exp::bestow::NAME, value: RV::SubCommand(args), .. }, ..] => {
+            exp::TAG => match options.as_slice() {
+                [RO { name: exp::bestow::TAG, value: RV::SubCommand(args), .. }, ..] => {
                     let mut iter = args.iter();
                     let ids = parse_slash_arg!('match_slash, iter, "ids", &str);
                     let amount = parse_slash_arg!('match_slash, iter, "amount", i64);
@@ -46,16 +46,16 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) ->
                 },
                 _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
             },
-            id::NAME => match options.as_slice() {
-                [RO { name: id::distribute::NAME, value: RV::SubCommand(args), .. }, ..] => {
+            id::TAG => match options.as_slice() {
+                [RO { name: id::distribute::TAG, value: RV::SubCommand(args), .. }, ..] => {
                     let mut iter = args.iter();
                     let id = parse_slash_arg!('match_slash, iter, "id", &str);
                     id::distribute::run_slash(bot, id).await.map_err(EventError::Slash)
                 },
                 _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
             },
-            help::NAME => help::run_slash().await.map_err(EventError::Slash),
-            ping::NAME => ping::run_slash(ctx, slash).await.map_err(EventError::Slash),
+            help::TAG => help::run_slash().await.map_err(EventError::Slash),
+            ping::TAG => ping::run_slash(ctx, slash).await.map_err(EventError::Slash),
             _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
         }
     };

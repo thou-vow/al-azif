@@ -30,7 +30,7 @@ pub fn generate_damage_forecast_response(bot: &impl AsBot, damage_forecast: i64,
 }
 
 pub fn generate_reaction_request_response(bot: &impl AsBot, target_name: &str) -> Result<ResponseBlueprint> {
-    let receive_button = CreateButton::new(fc!("{} .", crate::commands::receive::NAME))
+    let receive_button = CreateButton::new(fc!("{} .", crate::commands::receive::TAG))
         .emoji(ReactionType::Unicode(
             crate::commands::receive::EMOJI
                 .parse()

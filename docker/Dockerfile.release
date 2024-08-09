@@ -26,7 +26,6 @@ RUN cargo build --release --bin al_azif
 # Stage 3: Runtime
 FROM debian:bookworm-slim
 
-
 COPY --from=builder /al_azif/target/release/al_azif /usr/local/bin/al_azif
 
 CMD ["/usr/local/bin/al_azif"]
