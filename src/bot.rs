@@ -1,9 +1,13 @@
 use crate::prelude::*;
 
 pub struct Bot {
-    pub lang:               Lang,
-    pub in_memory_database: Arc<InMemoryDatabase>,
-    pub main_guild:         GuildId,
+    pub lang:                  Lang,
+    pub listened_channel_id:   Option<ChannelId>,
+    pub in_memory_database:    Arc<InMemoryDatabase>,
+    pub main_guild_id:         GuildId,
+    pub main_voice_channel_id: ChannelId,
+    pub reqwest_client:        ReqwestClient,
+    pub songbird_manager:      Arc<Songbird>,
 }
 
 #[async_trait]
@@ -34,7 +38,17 @@ impl AsBot for Bot {
 
     fn get_lang(&self) -> &Lang { &self.lang }
 
-    fn get_main_guild(&self) -> &GuildId { &self.main_guild }
+    fn get_listened_channel_id(&self) -> Option<ChannelId> { self.listened_channel_id }
+
+    fn get_main_guild_id(&self) -> GuildId { self.main_guild_id }
+
+    fn get_main_voice_channel_id(&self) -> ChannelId { self.main_voice_channel_id }
+
+    fn get_reqwest_client(&self) -> ReqwestClient { self.reqwest_client.clone() }
+
+    fn get_songbird_manager(&self) -> Arc<Songbird> { self.songbird_manager.clone() }
+
+    fn set_listened_channel_id(&mut self, channel_id: Option<ChannelId>) { self.listened_channel_id = channel_id }
 }
 
 impl AsRef<InMemoryStore<Battle>> for Bot {

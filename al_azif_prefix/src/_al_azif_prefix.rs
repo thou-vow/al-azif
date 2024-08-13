@@ -16,7 +16,7 @@ use crate::_prelude::*;
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("An expected error")]
-    Expected(Blueprints),
+    Anticipated(ErrorResponse),
     #[error(transparent)]
     Core(#[from] CoreError),
     #[error("Failed to convert string to reaction type: {str}")]

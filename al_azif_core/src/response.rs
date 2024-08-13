@@ -7,6 +7,10 @@ pub type Responses = Vec<Response>;
 pub enum Response {
     // Only for prefix and slash commands
     DeleteOriginal,
+    // Only for component-based interactions
+    EditDefer { blueprint: ResponseBlueprint },
+    // Only for component-based interactions
+    EditDeferAndDelete { blueprint: ResponseBlueprint },
     Send { blueprints: Vec<ResponseBlueprint> },
     SendAndDelete { blueprints: Vec<ResponseBlueprint> },
     // Only for slash commands and component-based interactions
@@ -21,6 +25,9 @@ pub enum Response {
 impl Response {
     pub fn delete_original() -> Self { Self::DeleteOriginal }
 
+    pub fn edit_defer(blueprint: ResponseBlueprint) -> Self { Self::EditDefer { blueprint } }
+
+    pub fn edit_defer_and_delete(blueprint: ResponseBlueprint) -> Self { Self::EditDeferAndDelete { blueprint } }
     pub fn send(blueprints: Vec<ResponseBlueprint>) -> Self { Self::Send { blueprints } }
 
     pub fn send_and_delete(blueprints: Vec<ResponseBlueprint>) -> Self { Self::SendAndDelete { blueprints } }
@@ -103,6 +110,30 @@ impl ResponseBlueprint {
 
         into
     }
+
+    pub fn edit_interaction_response(&self) -> EditInteractionResponse<'static> {
+        let mut into = EditInteractionResponse::new()
+            .embeds(self.new_embeds.clone())
+            .components(self.new_components.clone());
+    
+        if let Some(new_content) = &self.new_content {
+            into = into.content(new_content.clone());
+        }
+
+        into
+    }
+}
+
+#[derive(Debug)]
+pub enum ErrorResponse {
+    EditDefer { blueprint: ResponseBlueprint },
+    Send { blueprints: Vec<ResponseBlueprint> },
+    SendLoose { blueprints: Vec<ResponseBlueprint> },
+}
+impl ErrorResponse {
+    pub fn edit_defer(blueprint: ResponseBlueprint) -> Self { Self::EditDefer { blueprint } }
+    pub fn send(blueprints: Vec<ResponseBlueprint>) -> Self { Self::Send { blueprints } }
+    pub fn send_loose(blueprints: Vec<ResponseBlueprint>) -> Self { Self::SendLoose { blueprints } }
 }
 
 pub fn simple_send(new_content: impl Into<Cow<'static, str>>) -> Vec<Response> {

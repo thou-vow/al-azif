@@ -65,7 +65,7 @@ pub mod bestow {
                 ))
             };
 
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(new_content)]));
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(new_content)])));
         }
 
         for id_m in id_ms {

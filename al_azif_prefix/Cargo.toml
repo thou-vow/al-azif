@@ -7,7 +7,6 @@ path = "src/_al_azif_prefix.rs"
 
 [dependencies]
 al_azif_core.workspace = true
-anyhow.workspace = true
 const_format.workspace = true
 serenity.workspace = true
 small-fixed-array.workspace = true

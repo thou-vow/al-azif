@@ -38,7 +38,7 @@ pub struct Setting<
     battle_state:                 BattleS,
     moment_state:                 MomentS,
     user_state:                   UserS,
-    required_targets_state:                RequiredTargetsS,
+    required_targets_state:       RequiredTargetsS,
     optional_targets_state:       OptionalTargetsS,
     reserved_args_state:          ReservedArgsS,
     optional_reserved_args_state: OptionalReservedArgsS,
@@ -64,10 +64,10 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, Empty, Empty, Empty, Empty, Empty, Empty> 
         let tag = FixedString::from_string_trunc(tag);
 
         let Ok(m) = Mirror::<Battle>::get(self.bot, &tag).await else {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                 en: "No battle is currently happening in this channel.",
                 pt: "Não há uma batalha acontecendo neste canal."
-            ))]));
+            ))])));
         };
 
         Ok(Setting {
@@ -76,7 +76,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, Empty, Empty, Empty, Empty, Empty, Empty> 
             battle_state:                 FBattle { tag, m },
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            required_targets_state:                self.required_targets_state,
+            required_targets_state:       self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -90,10 +90,10 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, Empty, Empty, Empty, Empty, Empty
         let battle = self.battle_state.m.read().await;
 
         let Moment::Primary(primary) = &battle.current_moment else {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                 en: "You can't use this command right now.",
                 pt: "Você não pode usar este comando agora."
-            ))]));
+            ))])));
         };
         let primary = primary.to_owned();
 
@@ -105,7 +105,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, Empty, Empty, Empty, Empty, Empty
             battle_state:                 self.battle_state,
             moment_state:                 FPrimaryMoment(primary),
             user_state:                   self.user_state,
-            required_targets_state:                self.required_targets_state,
+            required_targets_state:       self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -116,10 +116,10 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, Empty, Empty, Empty, Empty, Empty
         let battle = self.battle_state.m.read().await;
 
         let Moment::Reactive(reactive) = &battle.current_moment else {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                 en: "You can't use this command right now.",
                 pt: "Você não pode usar este comando agora."
-            ))]));
+            ))])));
         };
         let reactive = reactive.to_owned();
 
@@ -131,7 +131,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, Empty, Empty, Empty, Empty, Empty
             battle_state:                 self.battle_state,
             moment_state:                 FReactiveMoment(reactive.clone()),
             user_state:                   self.user_state,
-            required_targets_state:                self.required_targets_state,
+            required_targets_state:       self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -148,19 +148,19 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, FPrimaryMoment, Empty, Empty, Emp
                 let tag = FixedString::from_str_trunc(tag);
 
                 if self.moment_state.0.moment_owner_tag != tag {
-                    return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+                    return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                         en: "You can't use this action right now.",
                         pt: "Você não pode usar esta ação agora."
-                    ))]));
+                    ))])));
                 }
 
                 tag
             },
             None => {
-                return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+                return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                     en: "You must specify a user.",
                     pt: "Você deve especificar um usuário."
-                ))]))
+                ))])))
             },
         };
 
@@ -175,7 +175,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, FPrimaryMoment, Empty, Empty, Emp
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   FUser { tag, m },
-            required_targets_state:                self.required_targets_state,
+            required_targets_state:       self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -200,19 +200,19 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, FReactiveMoment, Empty, Empty, Em
                 let tag = FixedString::from_str_trunc(tag);
 
                 if !self.battle_state.m.read().await.opponents.iter().any(|opponent| opponent.tag == tag) {
-                    return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+                    return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                         en: "You are not in the battle.",
                         pt: "Você não está na batalha."
-                    ))]));
+                    ))])));
                 }
 
                 tag
             },
             None => {
-                return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+                return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                     en: "You must specify a user.",
                     pt: "Você deve especificar um usuário."
-                ))]))
+                ))])))
             },
         };
 
@@ -227,7 +227,7 @@ impl<'a, Bot: AsBot> Setting<'a, Bot, FBattle, FReactiveMoment, Empty, Empty, Em
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   FUser { tag, m },
-            required_targets_state:                self.required_targets_state,
+            required_targets_state:       self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -249,23 +249,23 @@ impl<'a, Bot: AsBot, MomentS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, 
             match self.args.pop_front() {
                 Some(tag) => {
                     let Ok(m) = Mirror::<Id>::get(self.bot, tag).await else {
-                        return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+                        return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                             en: f!("The Id `{tag}` was not found."),
                             pt: f!("O Id `{tag}` não foi encontrado.")
-                        ))]));
+                        ))])));
                     };
 
                     if !battle.opponents.iter().any(|opponent| opponent.tag == tag) {
-                        return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+                        return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                             en: f!("The Id `{tag}` is not in the battle."),
                             pt: f!("O Id `{tag}` não está na batalha.")
-                        ))]));
+                        ))])));
                     }
 
                     tags_and_ms[i] = Some((tag, m));
                 },
                 None => {
-                    return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(missing_target_arg_messages[i])]));
+                    return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(missing_target_arg_messages[i])])));
                 },
             }
         }
@@ -280,7 +280,7 @@ impl<'a, Bot: AsBot, MomentS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, 
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            required_targets_state:                FRequiredTargets { tags_and_ms },
+            required_targets_state:       FRequiredTargets { tags_and_ms },
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -289,7 +289,9 @@ impl<'a, Bot: AsBot, MomentS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, 
 }
 
 // Battle: found,   Moment: any,   User: found,   Targets: any,   Optional Targets: empty   Reserved Args: any   Optional Reserved Args: empty
-impl<'a, Bot: AsBot, MomentS, RequiredTargetsS, ReservedArgsS> Setting<'a, Bot, FBattle, MomentS, FUser, RequiredTargetsS, Empty, ReservedArgsS, Empty> {
+impl<'a, Bot: AsBot, MomentS, RequiredTargetsS, ReservedArgsS>
+    Setting<'a, Bot, FBattle, MomentS, FUser, RequiredTargetsS, Empty, ReservedArgsS, Empty>
+{
     pub async fn fetch_optional_targets<const LEN: usize>(
         mut self,
     ) -> Result<Setting<'a, Bot, FBattle, MomentS, FUser, RequiredTargetsS, FOptionalTargets<'a, LEN>, ReservedArgsS>> {
@@ -300,17 +302,17 @@ impl<'a, Bot: AsBot, MomentS, RequiredTargetsS, ReservedArgsS> Setting<'a, Bot, 
         for tag_and_m in tags_and_ms.iter_mut() {
             if let Some(tag) = self.args.pop_front() {
                 let Ok(m) = Mirror::<Id>::get(self.bot, tag).await else {
-                    return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+                    return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                         en: f!("The Id `{tag}` was not found."),
                         pt: f!("O Id `{tag}` não foi encontrado.")
-                    ))]));
+                    ))])));
                 };
 
                 if !battle.opponents.iter().any(|opponent| opponent.tag == tag) {
-                    return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
+                    return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(self.bot,
                         en: f!("The Id `{tag}` is not in the battle."),
                         pt: f!("O Id `{tag}` não está na batalha.")
-                    ))]));
+                    ))])));
                 }
 
                 *tag_and_m = Some((tag, m));
@@ -325,7 +327,7 @@ impl<'a, Bot: AsBot, MomentS, RequiredTargetsS, ReservedArgsS> Setting<'a, Bot, 
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            required_targets_state:                self.required_targets_state,
+            required_targets_state:       self.required_targets_state,
             optional_targets_state:       FOptionalTargets { tags_and_ms },
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -358,7 +360,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, const L1: usize, const L2: usize, Reserve
     /// If any of the targets (either required or optional) corresponds to the user, then return an error message
     pub fn unallow_any_self_any_target(self, error_message: &'static str) -> Result<Self> {
         if self.required_targets_state.tags_and_ms.iter().any(|(tag, _)| *tag == self.user_state.tag) {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
         }
 
         if self
@@ -368,7 +370,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, const L1: usize, const L2: usize, Reserve
             .filter_map(|tag| if let Some((target_tag, _)) = tag { Some(target_tag) } else { None })
             .any(|tag| *tag == self.user_state.tag)
         {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
         }
 
         Ok(self)
@@ -382,7 +384,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, const LEN: usize, OptionalTargetsS, Reser
     /// If the required target of index INDEX corresponds to the user, then return an error message
     pub fn unallow_self_required_target<const INDEX: usize>(self, error_message: &'static str) -> Result<Self> {
         if self.required_targets_state.tags_and_ms[INDEX].0 == self.user_state.tag {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
         }
 
         Ok(self)
@@ -391,7 +393,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, const LEN: usize, OptionalTargetsS, Reser
     /// If any of the required targets corresponds to the user, then return an error message
     pub fn unallow_any_self_required_target(self, error_message: &'static str) -> Result<Self> {
         if self.required_targets_state.tags_and_ms.iter().any(|(tag, _)| *tag == self.user_state.tag) {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
         }
 
         Ok(self)
@@ -409,7 +411,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS> Setting<'a, Bot, Battle
         for i in 0 .. LEN {
             match self.args.pop_front() {
                 Some(arg) => reserved_args[i] = Some(arg),
-                None => return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(missing_reserved_arg_messages[i])])),
+                None => return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(missing_reserved_arg_messages[i])]))),
             }
         }
 
@@ -421,7 +423,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS> Setting<'a, Bot, Battle
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            required_targets_state:                self.required_targets_state,
+            required_targets_state:       self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          FRequiredReservedArgs(reserved_args),
             optional_reserved_args_state: self.optional_reserved_args_state,
@@ -450,7 +452,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS, ReservedArgsS>
             battle_state:                 self.battle_state,
             moment_state:                 self.moment_state,
             user_state:                   self.user_state,
-            required_targets_state:                self.required_targets_state,
+            required_targets_state:       self.required_targets_state,
             optional_targets_state:       self.optional_targets_state,
             reserved_args_state:          self.reserved_args_state,
             optional_reserved_args_state: FOptionalReservedArgs(reserved_args),
@@ -466,7 +468,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS, const LEN: usize, Reser
     pub fn unallow_self_optional_target<const INDEX: usize>(self, error_message: &'static str) -> Result<Self> {
         if let Some((target_tag, _)) = &self.optional_targets_state.tags_and_ms[INDEX] {
             if *target_tag == self.user_state.tag {
-                return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
             }
         }
 
@@ -482,7 +484,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, RequiredTargetsS, const LEN: usize, Reser
             .filter_map(|tag| if let Some((target_tag, _)) = tag { Some(target_tag) } else { None })
             .any(|tag| *tag == self.user_state.tag)
         {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
         }
 
         Ok(self)
@@ -507,13 +509,13 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
         for i in 0 .. L1 {
             for j in i + 1 .. L1 {
                 if self.required_targets_state.tags_and_ms[i].0 == self.required_targets_state.tags_and_ms[j].0 {
-                    return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                    return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
                 }
             }
             for j in 0 .. L2 {
                 if let Some((tag_j, _)) = &self.optional_targets_state.tags_and_ms[j] {
                     if *tag_j == self.required_targets_state.tags_and_ms[i].0 {
-                            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                        return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
                     }
                 } else {
                     break;
@@ -527,7 +529,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
                     (&self.optional_targets_state.tags_and_ms[i], &self.optional_targets_state.tags_and_ms[j])
                 {
                     if tag_i == tag_j {
-                            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                        return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
                     }
                 } else {
                     break;
@@ -546,7 +548,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
                 if self.required_targets_state.tags_and_ms[i].0 == self.required_targets_state.tags_and_ms[j].0 {
                     count += 1;
                     if count >= N {
-                        return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                        return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
                     }
                 }
             }
@@ -556,7 +558,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
                     if *tag_j == self.required_targets_state.tags_and_ms[i].0 {
                         count += 1;
                         if count >= N {
-                            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
                         }
                     }
                 } else {
@@ -574,7 +576,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const L1: usize, const L2: usize, 
                     if tag_i == tag_j {
                         count += 1;
                         if count >= N {
-                            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
                         }
                     }
                 } else {
@@ -594,7 +596,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const LEN: usize, OptionalTargetsS
     /// If these two required targets are the same (when both exists), return an error message
     pub fn unallow_duplicate_required_target<const I1: usize, const I2: usize>(self, error_message: &'static str) -> Result<Self> {
         if self.required_targets_state.tags_and_ms[I1].0 == self.required_targets_state.tags_and_ms[I2].0 {
-            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
         }
 
         Ok(self)
@@ -608,7 +610,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, const LEN: usize, OptionalTargetsS
                 if self.required_targets_state.tags_and_ms[i].0 == self.required_targets_state.tags_and_ms[j].0 {
                     count += 1;
                     if count >= N {
-                        return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                        return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
                     }
                 }
             }
@@ -646,7 +648,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, RequiredTargetsS, const LEN: usize
             (&self.optional_targets_state.tags_and_ms[I1], &self.optional_targets_state.tags_and_ms[I2])
         {
             if tag_i == tag_j {
-                return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
             }
         }
 
@@ -664,7 +666,7 @@ impl<'a, Bot: AsBot, BattleS, MomentS, UserS, RequiredTargetsS, const LEN: usize
                     if tag_i == tag_j {
                         count += 1;
                         if count >= N {
-                            return Err(PrefixError::Expected(vec![ResponseBlueprint::with_content(error_message)]));
+                            return Err(PrefixError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(error_message)])));
                         }
                     }
                 }

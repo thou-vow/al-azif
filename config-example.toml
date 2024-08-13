@@ -1,2 +1,3 @@
 discord_bot_token = ''
-discord_main_guild = ''
+discord_main_guild_id = ''
+discord_main_voice_channel_id = ''

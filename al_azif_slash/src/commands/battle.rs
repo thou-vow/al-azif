@@ -48,10 +48,10 @@ pub mod end {
     pub async fn run_slash(bot: &impl AsBot, slash: &CommandInteraction) -> Result<Responses> {
         let battle_tag = slash.channel_id.to_string().into_boxed_str();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(bot,
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(bot,
                 en: "No battle is currently happening in this channel.",
                 pt: "Não há uma batalha acontecendo neste canal."
-            ))]));
+            ))])));
         };
 
         let battle = battle_m.read().await;
@@ -81,10 +81,10 @@ pub mod join {
     pub async fn run_slash(bot: &impl AsBot, slash: &CommandInteraction, id_tags: &str) -> Result<Responses> {
         let battle_tag = slash.channel_id.to_string();
         let Ok(battle_m) = Mirror::<Battle>::get(bot, &battle_tag).await else {
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(bot,
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(bot,
                 en: "No battle is currently happening in this channel.",
                 pt: "Não há uma batalha acontecendo neste canal."
-            ))]));
+            ))])));
         };
 
         let mut blueprints = Vec::new();
@@ -118,7 +118,7 @@ pub mod join {
                 ))
             };
 
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(new_content)]));
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(new_content)])));
         }
 
         if !already_in_battle_id_tags.is_empty() {
@@ -135,7 +135,7 @@ pub mod join {
                 )
             };
 
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(new_content)]));
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(new_content)])));
         }
 
         let mut joined_id_names = Vec::new();
@@ -208,7 +208,7 @@ pub mod start {
                 ))
             };
 
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(new_content)]));
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(new_content)])));
         }
 
         if !already_in_battle_id_tags.is_empty() {
@@ -225,14 +225,14 @@ pub mod start {
                 )
             };
 
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(new_content)]));
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(new_content)])));
         }
 
         if id_ms.len() < 2 {
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(bot,
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(bot,
                 en: "You need at least 2 Ids to start a battle.",
                 pt: "Precisa de pelo menos 2 Ids para iniciar uma batalha."
-            ))]));
+            ))])));
         }
 
         let mut blueprints = Vec::new();

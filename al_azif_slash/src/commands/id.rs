@@ -32,10 +32,10 @@ pub mod distribute {
 
     pub async fn run_slash(bot: &impl AsBot, id_tag: &str) -> Result<Responses> {
         let Ok(id_m) = Mirror::<Id>::get(bot, id_tag).await else {
-            return Err(SlashError::Expected(vec![ResponseBlueprint::with_content(lang_diff!(bot,
+            return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(lang_diff!(bot,
                 en: f!("Id `{id_tag}` not found."),
                 pt: f!("Id `{id_tag}` não encontrado.")
-            ))]));
+            ))])));
         };
 
         let new_embed = generate_embed(bot, &*id_m.read().await)?;

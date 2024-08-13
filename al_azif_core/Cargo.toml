@@ -7,13 +7,16 @@ path = "src/_al_azif_core.rs"
 
 [dependencies]
 ahash.workspace = true
-anyhow.workspace = true
 const_format.workspace = true
 rand.workspace = true
+reqwest.workspace = true
+rusty_ytdl.workspace = true
 serde.workspace = true
-toml.workspace = true
 serenity.workspace = true
 small-fixed-array.workspace = true
+songbird.workspace = true
+symphonia.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+toml.workspace = true
 tracing.workspace = true

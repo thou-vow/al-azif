@@ -14,6 +14,8 @@ pub enum Error {
     CouldNotCreateInteractionResponse(SerenityError),
     #[error("Could not delete message, why: {0}")]
     CouldNotDeleteMessage(SerenityError),
+    #[error("Could not edit response, why: {0}")]
+    CouldNotEditInteractionResponse(SerenityError),
     #[error("Could not get original interaction response, why: {0}")]
     CouldNotGetOriginalInteractionResponse(SerenityError),
     #[error("Could not parse component arg '{arg}' into type {into_type}")]
@@ -34,8 +36,12 @@ pub enum Error {
     InvalidPrefixCommand { name: FixedString<u8> },
     #[error("Invalid prefix component, custom id: {custom_id}")]
     InvalidPrefixComponent { custom_id: FixedString },
-    #[error("Invalid slash command, name: {name}")]
-    InvalidSlashCommand { name: FixedString<u8> },
+    #[error("Invalid slash command: {tag}")]
+    InvalidSlashCommand { tag: FixedString<u8> },
+    #[error("Invalid slash sub command at: {}", command_tag)]
+    InvalidSlashSubCommand { command_tag: &'static str },
+    #[error("Invalid slash sub command at: {} {}", command_tag, group_tag)]
+    InvalidSlashSubCommandOfGroup { command_tag: &'static str, group_tag: &'static str },
     #[error("Invalid slash component, custom id: {custom_id}")]
     InvalidSlashComponent { custom_id: FixedString },
     #[error("Missing required slash command option of name: {name}")]
@@ -72,6 +78,8 @@ pub async fn try_ready(bot: &impl AsBot, ctx: &Context, _ready: &Ready) -> Resul
     slash::register(bot, ctx).await?;
 
     ctx.idle();
+
+    voice::join_main_voice_channel(bot).await?;
 
     bot.spawn_flush_routine();
 

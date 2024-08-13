@@ -7,8 +7,10 @@ path = "src/_al_azif_slash.rs"
 
 [dependencies]
 al_azif_core.workspace = true
-anyhow.workspace = true
+rusty_ytdl.workspace = true
 serenity.workspace = true
+songbird.workspace = true
+symphonia.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true

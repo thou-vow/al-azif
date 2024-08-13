@@ -25,8 +25,11 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, msg: &Message) -> Result<()> {
 
     let responses = match execution_result {
         Ok(responses) => responses,
-        Err(EventError::Prefix(PrefixError::Expected(blueprints))) => {
+        Err(EventError::Prefix(PrefixError::Anticipated(ErrorResponse::Send { blueprints }))) => {
             vec![Response::delete_original(), Response::send_and_delete(blueprints)]
+        },
+        Err(EventError::Prefix(PrefixError::Anticipated(ErrorResponse::SendLoose { blueprints }))) => {
+            vec![Response::delete_original(), Response::send_loose_and_delete(blueprints)]
         },
         Err(err) => return Err(err),
     };
@@ -41,6 +44,8 @@ pub async fn perform_responses(ctx: &Context, msg: &Message, responses: Vec<Resp
     for response in responses {
         match response {
             Response::DeleteOriginal => delete_original = true,
+            Response::EditDefer { .. } => (),
+            Response::EditDeferAndDelete { .. } => (),
             Response::Send { blueprints } => {
                 let Some(first_blueprint) = blueprints.first() else {
                     continue;

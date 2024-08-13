@@ -3,8 +3,8 @@ use crate::_prelude::*;
 pub async fn register(bot: &impl AsBot, ctx: &Context) -> Result<()> {
     use al_azif_slash::commands::*;
 
-    bot.get_main_guild()
-        .set_commands(&ctx.http, &[battle::register(), exp::register(), help::register(), id::register()])
+    bot.get_main_guild_id()
+        .set_commands(&ctx.http, &[battle::register(), exp::register(), help::register(), id::register(), voice::register()])
         .await
         .map_err(EventError::CouldNotSetSlashCommands)?;
 
@@ -35,7 +35,7 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) ->
                     let ids = parse_slash_arg!('match_slash, iter, "ids", &str);
                     battle::start::run_slash(bot, slash, ids).await.map_err(EventError::Slash)
                 },
-                _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
+                _ => Err(EventError::InvalidSlashSubCommand { command_tag: battle::TAG }),
             },
             exp::TAG => match options.as_slice() {
                 [RO { name: exp::bestow::TAG, value: RV::SubCommand(args), .. }, ..] => {
@@ -44,7 +44,7 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) ->
                     let amount = parse_slash_arg!('match_slash, iter, "amount", i64);
                     exp::bestow::run_slash(bot, ids, amount).await.map_err(EventError::Slash)
                 },
-                _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
+                _ => Err(EventError::InvalidSlashSubCommand { command_tag: exp::TAG }),
             },
             id::TAG => match options.as_slice() {
                 [RO { name: id::distribute::TAG, value: RV::SubCommand(args), .. }, ..] => {
@@ -52,18 +52,35 @@ pub async fn run(bot: &impl AsBot, ctx: &Context, slash: &CommandInteraction) ->
                     let id = parse_slash_arg!('match_slash, iter, "id", &str);
                     id::distribute::run_slash(bot, id).await.map_err(EventError::Slash)
                 },
-                _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
+                _ => Err(EventError::InvalidSlashSubCommand { command_tag: id::TAG }),
             },
             help::TAG => help::run_slash().await.map_err(EventError::Slash),
             ping::TAG => ping::run_slash(ctx, slash).await.map_err(EventError::Slash),
-            _ => Err(EventError::InvalidSlashCommand { name: FixedString::from_str_trunc(name) }),
+            voice::TAG => match options.as_slice() {
+                [RO { name: voice::play::TAG, value: RV::SubCommandGroup(sub_options), .. }, ..] => match sub_options.as_slice() {
+                    [RO { name: voice::play::youtube::TAG, value: RV::SubCommand(args), .. }, ..] => {
+                        let mut iter = args.iter();
+                        let url = parse_slash_arg!('match_slash, iter, "url", &str);
+                        voice::play::youtube::run_slash(bot, ctx, slash, url).await.map_err(EventError::Slash)
+                    },
+                    _ => Err(EventError::InvalidSlashSubCommandOfGroup { command_tag: voice::TAG, group_tag: voice::play::TAG }),
+                },
+                _ => Err(EventError::InvalidSlashSubCommand { command_tag: voice::TAG }),
+            },
+            _ => Err(EventError::InvalidSlashCommand { tag: FixedString::from_str_trunc(name) }),
         }
     };
 
     let responses = match execution_result {
         Ok(responses) => responses,
-        Err(EventError::Slash(SlashError::Expected(blueprints))) => {
+        Err(EventError::Prefix(PrefixError::Anticipated(ErrorResponse::EditDefer { blueprint }))) => {
+            vec![Response::edit_defer_and_delete(blueprint)]
+        },
+        Err(EventError::Prefix(PrefixError::Anticipated(ErrorResponse::Send { blueprints }))) => {
             vec![Response::send_and_delete(blueprints)]
+        },
+        Err(EventError::Prefix(PrefixError::Anticipated(ErrorResponse::SendLoose { blueprints }))) => {
+            vec![Response::send_loose_and_delete(blueprints)]
         },
         Err(err) => return Err(err),
     };
@@ -77,6 +94,28 @@ pub async fn perform_responses(ctx: &Context, slash: &CommandInteraction, respon
     for response in responses {
         match response {
             Response::DeleteOriginal => (),
+            Response::EditDefer { blueprint } => {
+                slash
+                    .edit_response(&ctx.http, blueprint.edit_interaction_response())
+                    .await
+                    .map_err(EventError::CouldNotEditInteractionResponse)?;
+
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
+            },
+            Response::EditDeferAndDelete { blueprint } => {
+                slash
+                    .edit_response(&ctx.http, blueprint.edit_interaction_response())
+                    .await
+                    .map_err(EventError::CouldNotEditInteractionResponse)?;
+                msgs_to_delete.push(
+                    ctx.http
+                        .get_original_interaction_response(&slash.token)
+                        .await
+                        .map_err(EventError::CouldNotGetOriginalInteractionResponse)?,
+                );
+
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
+            },
             Response::Send { blueprints } => {
                 let Some(first_blueprint) = blueprints.first() else {
                     continue;

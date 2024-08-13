@@ -14,6 +14,7 @@ pub mod utils {
     pub mod roll;
     pub mod serenity;
 }
+pub mod voice;
 
 use crate::_prelude::*;
 
@@ -21,4 +22,6 @@ use crate::_prelude::*;
 pub enum Error {
     #[error(transparent)]
     Database(#[from] DatabaseError),
+    #[error(transparent)]
+    Voice(#[from] VoiceError),
 }

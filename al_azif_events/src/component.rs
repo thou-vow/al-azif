@@ -48,8 +48,14 @@ pub async fn run_prefix(bot: &impl AsBot, ctx: &Context, comp: &ComponentInterac
 
     let responses = match execution_result {
         Ok(responses) => responses,
-        Err(EventError::Prefix(PrefixError::Expected(blueprints))) => {
+        Err(EventError::Prefix(PrefixError::Anticipated(ErrorResponse::EditDefer { blueprint }))) => {
+            vec![Response::edit_defer_and_delete(blueprint)]
+        },
+        Err(EventError::Prefix(PrefixError::Anticipated(ErrorResponse::Send { blueprints }))) => {
             vec![Response::send_and_delete(blueprints)]
+        },
+        Err(EventError::Prefix(PrefixError::Anticipated(ErrorResponse::SendLoose { blueprints }))) => {
+            vec![Response::send_loose_and_delete(blueprints)]
         },
         Err(err) => return Err(err),
     };
@@ -63,6 +69,28 @@ pub async fn perform_responses(ctx: &Context, comp: &ComponentInteraction, respo
     for response in responses {
         match response {
             Response::DeleteOriginal => (),
+            Response::EditDefer { blueprint } => {
+                comp
+                    .edit_response(&ctx.http, blueprint.edit_interaction_response())
+                    .await
+                    .map_err(EventError::CouldNotEditInteractionResponse)?;
+
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
+            },
+            Response::EditDeferAndDelete { blueprint } => {
+                comp
+                    .edit_response(&ctx.http, blueprint.edit_interaction_response())
+                    .await
+                    .map_err(EventError::CouldNotEditInteractionResponse)?;
+                msgs_to_delete.push(
+                    ctx.http
+                        .get_original_interaction_response(&comp.token)
+                        .await
+                        .map_err(EventError::CouldNotGetOriginalInteractionResponse)?,
+                );
+
+                tokio::time::sleep(RESPONSE_INTERVAL).await;
+            },
             Response::Send { blueprints } => {
                 let Some(first_blueprint) = blueprints.first() else {
                     continue;

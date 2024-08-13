@@ -15,10 +15,5 @@ pub async fn run_slash(ctx: &Context, slash: &CommandInteraction) -> Result<Vec<
 
     let elapsed = initial_point.elapsed().as_millis();
 
-    slash
-        .edit_response(&ctx.http, EditInteractionResponse::new().content(f!("Latência atual: {elapsed}ms")))
-        .await
-        .map_err(SlashError::CouldNotEditInteractionResponse)?;
-
-    Ok(vec![])
+    Ok(vec![Response::edit_defer(ResponseBlueprint::with_content(f!("Latência atual: {elapsed}ms")))])
 }
