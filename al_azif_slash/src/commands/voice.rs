@@ -50,9 +50,9 @@ pub mod play {
                 .map_err(SlashError::CouldNotCreateInteractionResponse)?;
 
             if voice::join_main_voice_channel(bot).await.is_err() {
-                return Err(SlashError::Anticipated(ErrorResponse::send(vec![ResponseBlueprint::with_content(
+                return Err(SlashError::Anticipated(ErrorResponse::edit_defer(ResponseBlueprint::with_content(
                     lang_diff!(bot, en: "Could not join the main voice channel.", pt: "Não foi possível entrar no canal de voz principal."),
-                )])));
+                ))));
             }
 
             match voice::play_youtube_video(bot, url).await {
