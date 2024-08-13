@@ -7,9 +7,6 @@ services:
       dockerfile: docker/Dockerfile.debug
     volumes:
       - type: bind
-        source: ../assets
-        target: /assets
-      - type: bind
         source: ../config.toml
         target: /config.toml
       - type: bind
