@@ -6,12 +6,14 @@ version = 4
 name = "al-azif"
 version = "0.1.0"
 dependencies = [
+ "paste",
  "rug",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror",
  "tokio",
+ "typetag",
  "uuid",
 ]
 
@@ -23,9 +25,9 @@ checksum = "7b7e4c2464d97fe331d41de9d5db0def0a96f4d823b8b32a2efd503578988973"
 
 [[package]]
 name = "bitflags"
-version = "2.9.4"
+version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2261d10cca569e4643e526d8dc2e62e433cc8aba21ab764233731f8d369bf394"
+checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 
 [[package]]
 name = "bumpalo"
@@ -38,6 +40,17 @@ name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+
+[[package]]
+name = "erased-serde"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "259d404d09818dec19332e31d94558aeb442fea04c817006456c24b5460bbd4b"
+dependencies = [
+ "serde",
+ "serde_core",
+ "typeid",
+]
 
 [[package]]
 name = "errno"
@@ -75,6 +88,15 @@ checksum = "60f8970a75c006bb2f8ae79c6768a116dd215fa8346a87aed99bf9d82ca43394"
 dependencies = [
  "libc",
  "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "inventory"
+version = "0.3.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc61209c082fbeb19919bee74b176221b27223e27b65d781eb91af24eb1fb46e"
+dependencies = [
+ "rustversion",
 ]
 
 [[package]]
@@ -130,6 +152,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
+name = "paste"
+version = "1.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -137,9 +165,9 @@ checksum = "3b3cff922bd51709b605d9ead9aa71031d81447142d828eb4a6eba76fe619f9b"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.101"
+version = "1.0.102"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89ae43fd86e4158d6db51ad8e2b80f313af9cc74f5c0e03ccb87de09998732de"
+checksum = "8e0f6df8eaa422d97d72edcd152e1451618fed47fabbdbd5a8864167b1d4aff7"
 dependencies = [
  "unicode-ident",
 ]
@@ -242,9 +270,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.107"
+version = "2.0.108"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a26dbd934e5451d21ef060c018dae56fc073894c5a7896f882928a76e6d081b"
+checksum = "da58917d35242480a05c2897064da0a80589a2a0476c9a3f2fdc83b53502e917"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -306,10 +334,40 @@ dependencies = [
 ]
 
 [[package]]
-name = "unicode-ident"
-version = "1.0.19"
+name = "typeid"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f63a545481291138910575129486daeaf8ac54aee4387fe7906919f7830c7d9d"
+checksum = "bc7d623258602320d5c55d1bc22793b57daff0ec7efc270ea7d55ce1d5f5471c"
+
+[[package]]
+name = "typetag"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be2212c8a9b9bcfca32024de14998494cf9a5dfa59ea1b829de98bac374b86bf"
+dependencies = [
+ "erased-serde",
+ "inventory",
+ "once_cell",
+ "serde",
+ "typetag-impl",
+]
+
+[[package]]
+name = "typetag-impl"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27a7a9b72ba121f6f1f6c3632b85604cac41aedb5ddc70accbebb6cac83de846"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "unicode-ident"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "462eeb75aeb73aea900253ce739c8e18a67423fadf006037cd3ff27e82748a06"
 
 [[package]]
 name = "uuid"
