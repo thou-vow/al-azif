@@ -14,9 +14,6 @@ pub mod environment;
 pub mod mirror;
 pub mod persistence;
 pub mod rehydration;
-pub mod utils {
-	pub mod misc;
-}
 
 #[derive(Debug)]
 pub struct IdRegistry {
